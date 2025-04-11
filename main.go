@@ -9,6 +9,7 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/church"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/dropoff"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/parent"
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/pickup"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -56,6 +57,11 @@ func main() {
 	dropOffSvc := dropoff.NewService(dropoffRepo)
 	dropoffHandler := dropoff.NewHandler(db, dropOffSvc)
 	dropoffHandler.RegisterRoutes(r)
+
+	pickupRepo := pickup.NewRepository()
+	pickupSvc := pickup.NewService(pickupRepo)
+	pickupHandler := pickup.NewHandler(db, pickupSvc)
+	pickupHandler.RegisterRoutes(r)
 
 	r.Run()
 }
