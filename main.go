@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/church"
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/parent"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -13,7 +14,6 @@ import (
 )
 
 func main() {
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Error loading .env file")
@@ -25,20 +25,25 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	
-
 	fmt.Println("Database connection established")
 
 	r := gin.Default()
-
 	
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	repo := church.NewRepository()
-	svc := church.NewService(repo)
-	h := church.NewHandler(db,svc)
-	h.RegisterRoutes(r)
+	
+	churchRepo := church.NewRepository()
+	churchSvc := church.NewService(churchRepo)
+	churchHandler := church.NewHandler(db, churchSvc)
+	churchHandler.RegisterRoutes(r)
+	
 
-	r.Run() 
+	parentRepo := parent.NewRepository()
+	parentSvc := parent.NewService(parentRepo)
+	parentHandler := parent.NewHandler(db, parentSvc)
+	parentHandler.RegisterRoutes(r)
+
+	r.Run()
 }
