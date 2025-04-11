@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/child"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/church"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/parent"
 	"github.com/gin-gonic/gin"
@@ -44,6 +45,11 @@ func main() {
 	parentSvc := parent.NewService(parentRepo)
 	parentHandler := parent.NewHandler(db, parentSvc)
 	parentHandler.RegisterRoutes(r)
+
+	childRepo := child.NewRepository()
+	childSvc := child.NewService(childRepo)
+	childHandler := child.NewHandler(db, childSvc)
+	childHandler.RegisterRoutes(r)
 
 	r.Run()
 }
