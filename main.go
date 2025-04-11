@@ -10,6 +10,7 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/dropoff"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/parent"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/pickup"
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/user"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -42,7 +43,6 @@ func main() {
 	churchHandler := church.NewHandler(db, churchSvc)
 	churchHandler.RegisterRoutes(r)
 	
-
 	parentRepo := parent.NewRepository()
 	parentSvc := parent.NewService(parentRepo)
 	parentHandler := parent.NewHandler(db, parentSvc)
@@ -62,6 +62,12 @@ func main() {
 	pickupSvc := pickup.NewService(pickupRepo)
 	pickupHandler := pickup.NewHandler(db, pickupSvc)
 	pickupHandler.RegisterRoutes(r)
+
+	userRepo := user.NewRepository()
+	userSvc := user.NewService(userRepo)
+	userHandler := user.NewHandler(db, userSvc)
+	userHandler.RegisterRoutes(r)
+
 
 	r.Run()
 }
