@@ -10,6 +10,7 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/dropoff"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/parent"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/pickup"
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/security"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/user"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -30,6 +31,15 @@ func main() {
 	}
 	
 	fmt.Println("Database connection established")
+
+	db.AutoMigrate(
+	&church.Church{},
+	&parent.Parent{},
+	&child.Child{},
+	&dropoff.DropOff{},
+	&pickup.Pickup{},
+	&user.User{},
+	)
 
 	r := gin.Default()
 	
@@ -68,6 +78,11 @@ func main() {
 	userHandler := user.NewHandler(db, userSvc)
 	userHandler.RegisterRoutes(r)
 
+
+	secRepo := security.NewRepository()
+	secSvc := security.NewService(secRepo)
+	secHandler := security.NewHandler(db, secSvc)
+	secHandler.RegisterRoutes(r)
 
 	r.Run()
 }
