@@ -71,7 +71,7 @@ func main() {
 	dropoffHandler.RegisterRoutes(r)
 
 	pickupRepo := pickup.NewRepository()
-	pickupSvc := pickup.NewService(pickupRepo)
+	pickupSvc := pickup.NewService(pickupRepo, dropOffSvc)
 	pickupHandler := pickup.NewHandler(db, pickupSvc)
 	pickupHandler.RegisterRoutes(r)
 
