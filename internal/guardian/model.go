@@ -1,6 +1,6 @@
-package parent
+package guardian
 
-type Parent struct {
+type Guardian struct {
 	ID          uint   `gorm:"primaryKey" json:"id"`
 	ChurchID    uint   `json:"church_id"`
 	Name        string `json:"name"`

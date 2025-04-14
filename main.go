@@ -8,8 +8,8 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/child"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/church"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/dropoff"
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/guardian"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/otp"
-	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/parent"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/pickup"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/security"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/user"
@@ -35,11 +35,12 @@ func main() {
 
 	db.AutoMigrate(
 	&church.Church{},
-	&parent.Parent{},
+	&guardian.Guardian{},
 	&child.Child{},
 	&dropoff.DropOff{},
 	&pickup.Pickup{},
 	&user.User{},
+	&otp.OTPRequest{},
 	)
 
 	r := gin.Default()
@@ -54,9 +55,9 @@ func main() {
 	churchHandler := church.NewHandler(db, churchSvc)
 	churchHandler.RegisterRoutes(r)
 	
-	parentRepo := parent.NewRepository()
-	parentSvc := parent.NewService(parentRepo)
-	parentHandler := parent.NewHandler(db, parentSvc)
+	parentRepo := guardian.NewRepository()
+	parentSvc := guardian.NewService(parentRepo)
+	parentHandler := guardian.NewHandler(db, parentSvc)
 	parentHandler.RegisterRoutes(r)
 
 	childRepo := child.NewRepository()

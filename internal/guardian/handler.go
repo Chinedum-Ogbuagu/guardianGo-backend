@@ -1,4 +1,4 @@
-package parent
+package guardian
 
 import (
 	"net/http"
@@ -25,7 +25,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 }
 
 func (h *Handler) CreateParent(c *gin.Context) {
-	var parent Parent 
+	var parent Guardian 
 	if  err := c.ShouldBindJSON(&parent); err != nil {
 c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 return
