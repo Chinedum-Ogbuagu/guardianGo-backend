@@ -8,6 +8,7 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/child"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/church"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/dropoff"
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/otp"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/parent"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/pickup"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/security"
@@ -83,6 +84,11 @@ func main() {
 	secSvc := security.NewService(secRepo)
 	secHandler := security.NewHandler(db, secSvc)
 	secHandler.RegisterRoutes(r)
+
+	otpRepo := otp.NewRepository()
+	otpSvc := otp.NewService(otpRepo)
+	otpHandler := otp.NewHandler(db, otpSvc)
+	otpHandler.RegisterRoutes(r)
 
 	r.Run()
 }
