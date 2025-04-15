@@ -24,9 +24,10 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 		group.POST("/session", h.CreateDropSession)
 		group.GET("/session/:id", h.GetDropSessionByID)
 		group.GET("/session/code/:code", h.GetDropSessionByCode)
-	
-		group.POST("/session/:sessionID/child", h.AddChildToSession)
-		group.GET("/session/:sessionID/children", h.GetDropOffsBySessionID)
+		
+		// Drop Off endpoints
+		group.POST("/session/:id/child", h.AddChildToSession)
+		group.GET("/session/:id/children", h.GetDropOffsBySessionID)
 		group.GET("/child/:id", h.GetDropOffByID)
 	}
 }
@@ -98,7 +99,7 @@ type AddChildRequest struct {
 }
 
 func (h *Handler) AddChildToSession(c *gin.Context) {
-	sessionID, err := strconv.ParseUint(c.Param("sessionID"), 10, 32)
+	sessionID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session ID"})
 		return
@@ -120,7 +121,7 @@ func (h *Handler) AddChildToSession(c *gin.Context) {
 }
 
 func (h *Handler) GetDropOffsBySessionID(c *gin.Context) {
-	sessionID, err := strconv.ParseUint(c.Param("sessionID"), 10, 32)
+	sessionID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session ID"})
 		return
