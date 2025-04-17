@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/child"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/church"
@@ -13,6 +14,7 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/pickup"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/security"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/user"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -33,15 +35,21 @@ func main() {
 	
 	fmt.Println("Database connection established")
 
-	db.AutoMigrate(
-	&church.Church{},
-	&guardian.Guardian{},
-	&child.Child{},
-	&dropoff.DropOff{},
-	&pickup.Pickup{},
-	&user.User{},
-	&otp.OTPRequest{},
-	)
+
+	fmt.Println("Running AutoMigrations...")
+	if err := db.AutoMigrate(&church.Church{},
+		&guardian.Guardian{},
+		&child.Child{},
+		&dropoff.DropSession{},
+		&dropoff.DropOff{},		
+		&pickup.Pickup{},
+		&user.User{},
+		&otp.OTPRequest{},); err != nil {
+		log.Fatalf("Migration failed: %v", err)
+	}
+	fmt.Println("Migrations completed!")
+
+	
 
 	r := gin.Default()
 	
@@ -49,14 +57,23 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"}, 
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	
 	churchRepo := church.NewRepository()
 	churchSvc := church.NewService(churchRepo)
 	churchHandler := church.NewHandler(db, churchSvc)
 	churchHandler.RegisterRoutes(r)
 	
-	parentRepo := guardian.NewRepository()
-	parentSvc := guardian.NewService(parentRepo)
+	guardianRepo := guardian.NewRepository()
+	parentSvc := guardian.NewService(guardianRepo)
 	parentHandler := guardian.NewHandler(db, parentSvc)
 	parentHandler.RegisterRoutes(r)
 
@@ -66,7 +83,7 @@ func main() {
 	childHandler.RegisterRoutes(r)
 
 	dropoffRepo := dropoff.NewRepository()
-	dropOffSvc := dropoff.NewService(dropoffRepo)
+	dropOffSvc := dropoff.NewService(dropoffRepo, guardianRepo, childRepo)
 	dropoffHandler := dropoff.NewHandler(db, dropOffSvc)
 	dropoffHandler.RegisterRoutes(r)
 

@@ -1,10 +1,13 @@
 package guardian
 
-import "gorm.io/gorm"
+import (
+	"errors"
+
+	"gorm.io/gorm"
+)
 
 type Service interface {
-	Create(db *gorm.DB, parent *Guardian) error
-	GetByPhoneNumber(db *gorm.DB, phone  string) (*Guardian , error)
+	FindOrCreateGuardian(db *gorm.DB, name, phone string) (*Guardian, error)
 }
 
 type service struct {
@@ -15,11 +18,20 @@ func NewService(r Repository) Service {
 	return &service{repo: r}
 }
 
-func (s *service) Create(db *gorm.DB, guardian *Guardian) error {
-	return s.repo.Create(db,guardian)
-
-}
-
-func (s *service) GetByPhoneNumber (db *gorm.DB, phone string ) (*Guardian, error) {
-	return s.repo.GetByPhoneNumber(db, phone)
+func (s *service) FindOrCreateGuardian(db *gorm.DB, name, phone string) (*Guardian, error) {
+	guardian, err := s.repo.FindByPhone(db, phone)
+	if err == nil {
+		return guardian, nil
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		newGuardian := &Guardian{
+			Name:        name,
+			Phone: phone,
+		}
+		if err := s.repo.Create(db, newGuardian); err != nil {
+			return nil, err
+		}
+		return newGuardian, nil
+	}
+	return nil, err
 }

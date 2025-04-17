@@ -1,10 +1,10 @@
 package guardian
 
+import "time"
+
 type Guardian struct {
-	ID          uint   `gorm:"primaryKey" json:"id"`
-	ChurchID    uint   `json:"church_id"`
-	Name        string `json:"name"`
-	PhoneNumber string `gorm:"unique" json:"phone_number"`
-	PhotoURL    string `json:"photo_url"`
-	CreatedAt   string `json:"created_at"`
+	ID        uint     `gorm:"primaryKey" json:"id"`
+	Name      string   `json:"name"`
+	Phone     string   `gorm:"uniqueIndex" json:"phone_number"`
+	CreatedAt time.Time `json:"created_at"`
 }

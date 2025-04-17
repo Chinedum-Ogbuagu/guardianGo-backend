@@ -8,42 +8,38 @@ import (
 )
 
 type Handler struct {
-	DB *gorm.DB
-	Service Service 
+	DB      *gorm.DB
+	Service Service
 }
 
-func NewHandler(db *gorm.DB, s Service)  *Handler {
+func NewHandler(db *gorm.DB, s Service) *Handler {
 	return &Handler{DB: db, Service: s}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.Engine) {
-	group := r.Group("/parent")
+	group := r.Group("/api/guardians")
 	{
-		group.POST("/register", h.CreateParent)
-		group.GET("/:phone_number", h.GetParentByPhone)
+		group.POST("/", h.FindOrCreateGuardian)
 	}
 }
 
-func (h *Handler) CreateParent(c *gin.Context) {
-	var parent Guardian 
-	if  err := c.ShouldBindJSON(&parent); err != nil {
-c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-return
-	}
-	if err := h.Service.Create(h.DB, &parent); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return 
-	}
-	c.JSON(http.StatusOK, parent)
+type GuardianRequest struct {
+	Name  string `json:"name" binding:"required"`
+	Phone string `json:"phone" binding:"required"`
 }
 
-func (h *Handler) GetParentByPhone(c *gin.Context) {
-	phone := c.Param("phone_number")
-	parent, err := h.Service.GetByPhoneNumber(h.DB, phone)
+func (h *Handler) FindOrCreateGuardian(c *gin.Context) {
+	var req GuardianRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	guardian, err := h.Service.FindOrCreateGuardian(h.DB, req.Name, req.Phone)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "parent not found"})
-		return 
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create or find guardian"})
+		return
 	}
-	c.JSON(http.StatusOK, parent)
 
+	c.JSON(http.StatusOK, gin.H{"guardian": guardian})
 }

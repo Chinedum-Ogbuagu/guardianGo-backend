@@ -7,7 +7,7 @@ type Repository interface {
 	CreateDropSession(db *gorm.DB, ds *DropSession) error
 	GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, error)
 	GetDropSessionByCode(db *gorm.DB, code string) (*DropSession, error)
-	
+
 	// Drop Off operations
 	CreateDropOff(db *gorm.DB, d *DropOff) error
 	GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error)

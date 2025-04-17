@@ -1,15 +1,15 @@
 package child
 
 import (
+	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 type Handler struct {
-	DB *gorm.DB
+	DB      *gorm.DB
 	Service Service
 }
 
@@ -18,37 +18,48 @@ func NewHandler(db *gorm.DB, s Service) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r *gin.Engine) {
-	group := r.Group("/child")
+	group := r.Group("/api/children")
 	{
-		group.POST("/register", h.CreateChild)
-		group.GET("/:id", h.GetChildByID)
+		group.POST("/", h.FindOrCreateChild)
+		group.GET("/guardian/:id", h.GetChildrenByGuardian)
 	}
 }
 
-func (h *Handler) CreateChild(c *gin.Context) {
-	var child Child
-	if err := c.ShouldBindJSON(&child); err != nil {
+type ChildRequest struct {
+	Name       string `json:"name" binding:"required"`
+	GuardianID uint   `json:"guardian_id" binding:"required"`
+}
+
+func (h *Handler) FindOrCreateChild(c *gin.Context) {
+	var req ChildRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return 
+		return
 	}
-	if err := h.Service.Create(h.DB, &child); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return 
-	}
-	c.JSON(http.StatusCreated, child)
 
+	child, err := h.Service.FindOrCreateChild(h.DB, req.Name, req.GuardianID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create/find child"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"child": child})
 }
 
-func (h *Handler) GetChildByID(c *gin.Context) {
-	id,err := strconv.Atoi(c.Param("id"))
-	if err !=nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error" : "invalid child ID"})
-		return 
+func (h *Handler) GetChildrenByGuardian(c *gin.Context) {
+	id := c.Param("id")
+
+	var guardianID uint
+	if _, err := fmt.Sscanf(id, "%d", &guardianID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid guardian ID"})
+		return
 	}
-	child, err := h.Service.GetByID(h.DB, uint(id))
+
+	children, err := h.Service.GetChildrenByGuardian(h.DB, guardianID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "child not found"})
-		return 
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch children"})
+		return
 	}
-	c.JSON(http.StatusOK, child)
+
+	c.JSON(http.StatusOK, gin.H{"children": children})
 }

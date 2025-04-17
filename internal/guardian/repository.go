@@ -3,8 +3,8 @@ package guardian
 import "gorm.io/gorm"
 
 type Repository interface {
-	Create(db *gorm.DB, guardian *Guardian ) error 
-	GetByPhoneNumber(db *gorm.DB, phone string) (*Guardian, error)
+	FindByPhone(db *gorm.DB, phone string) (*Guardian, error)
+	Create(db *gorm.DB, g *Guardian) error
 }
 
 type repository struct{}
@@ -13,15 +13,14 @@ func NewRepository() Repository {
 	return &repository{}
 }
 
-func (r *repository) Create(db *gorm.DB, guardian *Guardian) error {
-	return db.Create(guardian).Error
-}
-
-func (r *repository) GetByPhoneNumber(db *gorm.DB, phone string ) (*Guardian, error) {
-	var p Guardian 
-	if err := db.Where("phone_number = ?", phone).First(&p).Error; err != nil {
+func (r *repository) FindByPhone(db *gorm.DB, phone string) (*Guardian, error) {
+	var guardian Guardian
+	if err := db.Where("phone_number = ?", phone).First(&guardian).Error; err != nil {
 		return nil, err
 	}
-	return &p, nil
+	return &guardian, nil
 }
 
+func (r *repository) Create(db *gorm.DB, g *Guardian) error {
+	return db.Create(g).Error
+}
