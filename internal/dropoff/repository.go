@@ -1,12 +1,18 @@
 package dropoff
 
-import "gorm.io/gorm"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
+
 
 type Repository interface {
 	// Drop Session operations
 	CreateDropSession(db *gorm.DB, ds *DropSession) error
 	GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, error)
 	GetDropSessionByCode(db *gorm.DB, code string) (*DropSession, error)
+	GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error)
 
 	// Drop Off operations
 	CreateDropOff(db *gorm.DB, d *DropOff) error
@@ -51,6 +57,22 @@ func (r *repository) GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error) {
 	}
 	return &d, nil
 }
+
+func (r *repository) GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error) {
+	var sessions []DropSession
+
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	end := start.Add(24 * time.Hour)
+
+	if err := db.Preload("DropOffs").
+		Where("created_at >= ? AND created_at < ?", start, end).
+		Find(&sessions).Error; err != nil {
+		return nil, err
+	}
+
+	return sessions, nil
+}
+
 
 func (r *repository) GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error) {
 	var dropOffs []DropOff

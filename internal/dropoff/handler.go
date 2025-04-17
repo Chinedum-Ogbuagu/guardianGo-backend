@@ -3,6 +3,7 @@ package dropoff
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -23,6 +24,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 		group.POST("/session", h.CreateDropSession)
 		group.GET("/session/:id", h.GetDropSessionByID)
 		group.GET("/session/code/:code", h.GetDropSessionByCode)
+		group.GET("/sessions", h.GetDropSessionsByDate)
 
 		group.GET("/session/:id/children", h.GetDropOffsBySessionID)
 		group.GET("/child/:id", h.GetDropOffByID)
@@ -125,4 +127,26 @@ func (h *Handler) GetDropOffByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dropOff)
+}
+
+func (h *Handler) GetDropSessionsByDate(c *gin.Context) {
+	dateParam := c.Query("date")
+	if dateParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required date parameter (YYYY-MM-DD)"})
+		return
+	}
+
+	parsedDate, err := time.Parse("2006-01-02", dateParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use YYYY-MM-DD"})
+		return
+	}
+
+	sessions, err := h.Service.GetDropSessionsByDate(h.DB, parsedDate)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": sessions})
 }

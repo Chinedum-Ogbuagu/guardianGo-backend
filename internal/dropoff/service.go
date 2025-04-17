@@ -36,6 +36,7 @@ type Service interface {
 	GetDropSessionByCode(db *gorm.DB, code string) (*DropSession, error)
 	GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error)
 	GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error)
+	GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error)
 }
 
 type service struct {
@@ -134,3 +135,7 @@ func (s *service) GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff
 func (s *service) GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error) {
 	return s.dropRepo.GetDropOffByID(db, id)
 }
+func (s *service) GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error) {
+	return s.dropRepo.GetDropSessionsByDate(db, date)
+}
+
