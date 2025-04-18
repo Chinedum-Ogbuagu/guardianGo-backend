@@ -13,6 +13,8 @@ type Repository interface {
 	GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, error)
 	GetDropSessionByCode(db *gorm.DB, code string) (*DropSession, error)
 	GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error)
+	CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error)
+
 
 	// Drop Off operations
 	CreateDropOff(db *gorm.DB, d *DropOff) error
@@ -81,3 +83,18 @@ func (r *repository) GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]Drop
 	}
 	return dropOffs, nil
 }
+
+
+func (r *repository) CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error) {
+	var count int64
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	end := start.Add(24 * time.Hour)
+
+	if err := db.Model(&DropSession{}).
+		Where("guardian_id = ? AND created_at >= ? AND created_at < ?", guardianID, start, end).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+

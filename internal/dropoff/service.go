@@ -1,6 +1,7 @@
 package dropoff
 
 import (
+	"errors"
 	"math/rand"
 	"strconv"
 	"time"
@@ -61,22 +62,39 @@ func (s *service) CreateDropSession(db *gorm.DB, req CreateDropSessionRequest) (
 		}
 	}()
 
-	
 	guardianEntity, err := s.guardianRepo.FindByPhone(tx, req.Guardian.Phone)
 	if err != nil {
-		guardianEntity = &guardian.Guardian{
-			Name: req.Guardian.Name,
-			Phone: req.Guardian.Phone,
-			CreatedAt: time.Now(),
-		}
-		if err := s.guardianRepo.Create(tx, guardianEntity); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			guardianEntity = &guardian.Guardian{
+				Name:      req.Guardian.Name,
+				Phone:     req.Guardian.Phone,
+				CreatedAt: time.Now(),
+			}
+			if err := s.guardianRepo.Create(tx, guardianEntity); err != nil {
+				tx.Rollback()
+				return nil, err
+			}
+		} else {			
 			tx.Rollback()
 			return nil, err
 		}
 	}
 
+	alreadyDroppedToday, err := s.dropRepo.CheckGuardianDropSessionExistsForDate(tx, guardianEntity.ID, time.Now())
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	if alreadyDroppedToday {
+		tx.Rollback()
+		return nil, errors.New("this guardian has already dropped off children today")
+	}
+
+
 	dropSession := DropSession{
 		UniqueCode: generateCode(),
+		GuardianPhone: guardianEntity.Phone,
+		GuardianName: guardianEntity.Name,
 		GuardianID: guardianEntity.ID,
 		ChurchID: req.ChurchID,
 		Note: req.Note,
