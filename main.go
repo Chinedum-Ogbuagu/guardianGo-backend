@@ -73,9 +73,9 @@ func main() {
 	churchHandler.RegisterRoutes(r)
 	
 	guardianRepo := guardian.NewRepository()
-	parentSvc := guardian.NewService(guardianRepo)
-	parentHandler := guardian.NewHandler(db, parentSvc)
-	parentHandler.RegisterRoutes(r)
+	guardianSvc := guardian.NewService(guardianRepo)
+	guardianHandler := guardian.NewHandler(db, guardianSvc)
+	guardianHandler.RegisterRoutes(r)
 
 	childRepo := child.NewRepository()
 	childSvc := child.NewService(childRepo)

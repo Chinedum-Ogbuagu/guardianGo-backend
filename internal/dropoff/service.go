@@ -79,8 +79,8 @@ func (s *service) CreateDropSession(db *gorm.DB, req CreateDropSessionRequest) (
 			return nil, err
 		}
 	}
-
-	alreadyDroppedToday, err := s.dropRepo.CheckGuardianDropSessionExistsForDate(tx, guardianEntity.ID, time.Now())
+	loc, _ := time.LoadLocation("Africa/Lagos")
+	alreadyDroppedToday, err := s.dropRepo.CheckGuardianDropSessionExistsForDate(tx, guardianEntity.ID, time.Now().In(loc))
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -98,7 +98,7 @@ func (s *service) CreateDropSession(db *gorm.DB, req CreateDropSessionRequest) (
 		GuardianID: guardianEntity.ID,
 		ChurchID: req.ChurchID,
 		Note: req.Note,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().In(loc),
 	}
 
 	if err := s.dropRepo.CreateDropSession(tx, &dropSession); err != nil {

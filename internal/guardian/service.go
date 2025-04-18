@@ -8,6 +8,8 @@ import (
 
 type Service interface {
 	FindOrCreateGuardian(db *gorm.DB, name, phone string) (*Guardian, error)
+	FindGuardianByPhone(db *gorm.DB, phone string) (*Guardian, error)
+	GetChildrenByGuardianPhone(db *gorm.DB, phone string) ([]ChildInfo, error)
 }
 
 type service struct {
@@ -34,4 +36,10 @@ func (s *service) FindOrCreateGuardian(db *gorm.DB, name, phone string) (*Guardi
 		return newGuardian, nil
 	}
 	return nil, err
+}
+func (s *service) FindGuardianByPhone(db *gorm.DB, phone string) (*Guardian, error) {
+    return s.repo.FindByPhone(db, phone)
+}
+func (s *service) GetChildrenByGuardianPhone(db *gorm.DB, phone string) ([]ChildInfo, error) {
+	return s.repo.GetChildrenByGuardianPhone(db, phone)
 }

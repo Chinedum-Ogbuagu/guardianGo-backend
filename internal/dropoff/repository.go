@@ -62,8 +62,9 @@ func (r *repository) GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error) {
 
 func (r *repository) GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error) {
 	var sessions []DropSession
-
-	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+	loc, _ := time.LoadLocation("Africa/Lagos")
+	date = date.In(loc)
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, loc)
 	end := start.Add(24 * time.Hour)
 
 	if err := db.Preload("DropOffs").
