@@ -14,6 +14,7 @@ type Repository interface {
 	GetDropSessionByCode(db *gorm.DB, code string) (*DropSession, error)
 	GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error)
 	CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error)
+	UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error
 
 
 	// Drop Off operations
@@ -99,3 +100,6 @@ func (r *repository) CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardian
 	return count > 0, nil
 }
 
+func (r *repository) UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error {
+	return db.Model(&DropSession{}).Where("id = ?", sessionID).Update("pickup_status", status).Error
+}

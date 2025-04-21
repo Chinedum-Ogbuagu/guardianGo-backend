@@ -38,6 +38,7 @@ type Service interface {
 	GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error)
 	GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error)
 	GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error)
+	MarkDropSessionPickedUp(db *gorm.DB, sessionID uint) error
 }
 
 type service struct {
@@ -107,7 +108,7 @@ func (s *service) CreateDropSession(db *gorm.DB, req CreateDropSessionRequest) (
 	}
 
 	for _, childInput := range req.Children {
-	childEntity, err := s.childRepo.FindOrCreateChild(tx, childInput.Name, guardianEntity.ID)
+	childEntity, err := s.childRepo.FindOrCreateChild(tx, childInput.Name, childInput.Class, guardianEntity.ID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -116,6 +117,7 @@ func (s *service) CreateDropSession(db *gorm.DB, req CreateDropSessionRequest) (
 	dropOff := DropOff{
 		DropSessionID: dropSession.ID,
 		ChildID:       childEntity.ID,
+		ChildName:     childEntity.Name,
 		Class:         childInput.Class,
 		BagStatus:     childInput.Bag,
 		Note:          childInput.Note,
@@ -157,3 +159,8 @@ func (s *service) GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSess
 	return s.dropRepo.GetDropSessionsByDate(db, date)
 }
 
+func (s *service) MarkDropSessionPickedUp(db *gorm.DB, sessionID uint) error {
+	return db.Model(&DropSession{}).
+		Where("id = ?", sessionID).
+		Update("pickup_status", "completed").Error
+}

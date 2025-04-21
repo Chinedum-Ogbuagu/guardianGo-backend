@@ -7,7 +7,7 @@ import (
 )
 
 type Repository interface {
-	FindOrCreateChild(db *gorm.DB, name string, guardianID uint) (*Child, error)
+	FindOrCreateChild(db *gorm.DB, name string, class string, guardianID uint) (*Child, error)
 	GetChildrenByGuardian(db *gorm.DB, guardianID uint) ([]Child, error)
 }
 
@@ -17,7 +17,7 @@ func NewRepository() Repository {
 	return &repository{}
 }
 
-func (r *repository) FindOrCreateChild(db *gorm.DB, name string, guardianID uint) (*Child, error) {
+func (r *repository) FindOrCreateChild(db *gorm.DB, name string, class string, guardianID uint) (*Child, error) {
 	var child Child
 	err := db.Where("name = ? AND guardian_id = ?", name, guardianID).First(&child).Error
 	if err == nil {
@@ -30,6 +30,7 @@ func (r *repository) FindOrCreateChild(db *gorm.DB, name string, guardianID uint
 	child = Child{
 		Name:       name,
 		GuardianID: guardianID,
+		Class:  class,
 		CreatedAt:  time.Now(),
 	}
 	if err := db.Create(&child).Error; err != nil {

@@ -28,6 +28,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 type ChildRequest struct {
 	Name       string `json:"name" binding:"required"`
 	GuardianID uint   `json:"guardian_id" binding:"required"`
+	Class	 string `json:"class"`
 }
 
 func (h *Handler) FindOrCreateChild(c *gin.Context) {
@@ -37,7 +38,7 @@ func (h *Handler) FindOrCreateChild(c *gin.Context) {
 		return
 	}
 
-	child, err := h.Service.FindOrCreateChild(h.DB, req.Name, req.GuardianID)
+	child, err := h.Service.FindOrCreateChild(h.DB, req.Name, req.Class, req.GuardianID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create/find child"})
 		return

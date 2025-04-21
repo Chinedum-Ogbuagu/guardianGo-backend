@@ -1,7 +1,6 @@
 package pickup
 
 import (
-	"errors"
 	"math/rand"
 	"strconv"
 	"time"
@@ -18,60 +17,72 @@ func generateCode() string {
 }
 
 type Service interface {
-	// PickupSession operations
-	CreatePickupSession(db *gorm.DB, dropSessionID, guardianID, verifiedByID uint, notes string) (*PickupSession, error)
-	GetPickupSessionByID(db *gorm.DB, id uint) (*PickupSession, error)
+	ConfirmPickup(db *gorm.DB, dropSession dropoff.DropSession, verifiedBy uint, notes string) (*PickupSession, error)
 	GetPickupSessionByDropSessionID(db *gorm.DB, dropSessionID uint) (*PickupSession, error)
-	ValidatePickupCode(db *gorm.DB, dropSessionID uint, code string) (bool, error)
-	
-	// Pickup operations
-	GetPickupByChildAndDropSessionID(db *gorm.DB, childID, dropSessionID uint) (*Pickup, error)
+		ConfirmPickupSession(db *gorm.DB, dropSessionID, guardianID, verifiedByID uint, notes string) (*PickupSession, error)
+
 }
 
 type service struct {
-	repo Repository
-	dropoffService dropoff.Service // Dependency on dropoff service
+	repo      Repository
+	dropRepo  dropoff.Repository
 }
 
-// Include a reference to the dropoff service for cross-domain validation
-func NewService(r Repository, ds dropoff.Service) Service {
-	return &service{
-		repo: r,
-		dropoffService: ds,
-	}
+func NewService(r Repository, dropRepo dropoff.Repository) Service {
+	return &service{repo: r, dropRepo: dropRepo}
 }
 
-func (s *service) CreatePickupSession(db *gorm.DB, dropSessionID, guardianID, verifiedByID uint, notes string) (*PickupSession, error) {
-	// Check if pickup session already exists for this drop session
-	existingSession, err := s.repo.GetPickupSessionByDropSessionID(db, dropSessionID)
-	if err == nil && existingSession != nil {
-		return nil, errors.New("pickup session already exists for this drop session")
-	}
-	
-	// Get drop session to validate it exists and get all children
-	if _, err := s.dropoffService.GetDropSessionByID(db, dropSessionID); err != nil {
-		return nil, errors.New("drop session not found")
-	}
-	
-	// Get all drop-offs for this session
-	dropOffs, err := s.dropoffService.GetDropOffsBySessionID(db, dropSessionID)
-	if err != nil {
-		return nil, errors.New("failed to retrieve drop-offs")
-	}
-	
-	if len(dropOffs) == 0 {
-		return nil, errors.New("no children to pick up in this drop session")
-	}
-	
-	// Begin transaction
+func (s *service) ConfirmPickup(db *gorm.DB, session dropoff.DropSession, verifiedBy uint, notes string) (*PickupSession, error) {
 	tx := db.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
+
+	pickupSession := &PickupSession{
+		DropSessionID: session.ID,
+		GuardianID:    session.GuardianID,
+		VerifiedByID:  verifiedBy,
+		VerifiedAt:    time.Now(),
+		CreatedAt:     time.Now(),
+		UniqueCode:    generateCode(),
+		Notes:         notes,
+	}
+
+	if err := s.repo.CreatePickupSession(tx, pickupSession); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	for _, d := range session.DropOffs {
+		p := &Pickup{
+			PickupSessionID: pickupSession.ID,
+			ChildID:         d.ChildID,
+			DropOffID:       d.ID,
+			PickupTime:      time.Now(),
+			CreatedAt:       time.Now(),
 		}
-	}()
-	
-	// Create pickup session
+		if err := s.repo.CreatePickup(tx, p); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+
+	// Update drop session status
+	if err := tx.Model(&dropoff.DropSession{}).Where("id = ?", session.ID).Update("pickup_session_completed", true).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
+	return pickupSession, nil
+}
+
+func (s *service) GetPickupSessionByDropSessionID(db *gorm.DB, dropSessionID uint) (*PickupSession, error) {
+	return s.repo.GetPickupSessionByDropSessionID(db, dropSessionID)
+}
+func (s *service) ConfirmPickupSession(db *gorm.DB, dropSessionID, guardianID, verifiedByID uint, notes string) (*PickupSession, error) {
+	tx := db.Begin()
+
 	pickupSession := PickupSession{
 		DropSessionID: dropSessionID,
 		GuardianID:    guardianID,
@@ -81,56 +92,42 @@ func (s *service) CreatePickupSession(db *gorm.DB, dropSessionID, guardianID, ve
 		Notes:         notes,
 		CreatedAt:     time.Now(),
 	}
-	
+
 	if err := s.repo.CreatePickupSession(tx, &pickupSession); err != nil {
 		tx.Rollback()
 		return nil, err
 	}
-	
-	// Create individual pickups for each child in the drop session
-	
-	for _, dropOff := range dropOffs {
-		pickup := Pickup{
+
+	// Fetch all DropOffs tied to the DropSession
+	var dropOffs []dropoff.DropOff
+	if err := tx.Where("drop_session_id = ?", dropSessionID).Find(&dropOffs).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	for _, do := range dropOffs {
+		p := Pickup{
 			PickupSessionID: pickupSession.ID,
-			ChildID:        dropOff.ChildID,
-			DropOffID:      dropOff.ID,
-			PickupTime:     time.Now(),
-			CreatedAt:      time.Now(),
+			ChildID:         do.ChildID,
+			DropOffID:       do.ID,
+			PickupTime:      time.Now(),
+			CreatedAt:       time.Now(),
 		}
-		
-		if err := s.repo.CreatePickup(tx, &pickup); err != nil {
+		if err := s.repo.CreatePickup(tx, &p); err != nil {
 			tx.Rollback()
 			return nil, err
 		}
 	}
-	
-	// Commit transaction
+
+	// Update DropSession status to completed
+	if err := tx.Model(&dropoff.DropSession{}).Where("id = ?", dropSessionID).Update("pickup_session_completed", true).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
 	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
-	
-	// Return the complete pickup session with all pickups
-	return s.repo.GetPickupSessionByID(db, pickupSession.ID)
-}
 
-func (s *service) GetPickupSessionByID(db *gorm.DB, id uint) (*PickupSession, error) {
-	return s.repo.GetPickupSessionByID(db, id)
-}
-
-func (s *service) GetPickupSessionByDropSessionID(db *gorm.DB, dropSessionID uint) (*PickupSession, error) {
-	return s.repo.GetPickupSessionByDropSessionID(db, dropSessionID)
-}
-
-func (s *service) ValidatePickupCode(db *gorm.DB, dropSessionID uint, code string) (bool, error) {
-	// First check if drop session exists
-	_, err := s.dropoffService.GetDropSessionByCode(db, code)
-	if err != nil {
-		return false, errors.New("invalid drop session code")
-	}
-	
-	return true, nil
-}
-
-func (s *service) GetPickupByChildAndDropSessionID(db *gorm.DB, childID, dropSessionID uint) (*Pickup, error) {
-	return s.repo.GetPickupByChildAndDropSessionID(db, childID, dropSessionID)
+	return &pickupSession, nil
 }

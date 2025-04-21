@@ -13,6 +13,7 @@ type DropSession struct {
 	ChurchID   uint      `json:"church_id"`
 	Note       string    `json:"note"`
 	CreatedAt  time.Time `json:"created_at"`
+	PickupStatus     string    `gorm:"default:'awaiting'" json:"pickup_status"` 
 	DropOffs   []DropOff `json:"drop_offs,omitempty" gorm:"foreignKey:DropSessionID"`
 }
 
@@ -22,6 +23,7 @@ type DropOff struct {
 	DropSessionID uint      `json:"drop_session_id"`
 	ChildID       uint      `json:"child_id"`
 	Class         string    `json:"class"`
+	ChildName	 string    `json:"child_name"`
 	BagStatus     bool      `json:"bag_status"`
 	Note          string    `json:"note"`
 	DropOffTime   time.Time  `json:"drop_off_time"`

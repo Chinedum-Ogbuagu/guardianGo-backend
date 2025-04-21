@@ -33,12 +33,21 @@ func (r *repository) Create(db *gorm.DB, g *Guardian) error {
 func (r *repository) GetChildrenByGuardianPhone(db *gorm.DB, phone string) ([]ChildInfo, error) {
 	var results []ChildInfo
 
-	err := db.Raw(`
-		SELECT c.name, c.class, c.note, c.bag_status
+	query := `
+		SELECT c.id, c.name, d.class, d.note, d.bag_status
 		FROM children c
 		JOIN guardians g ON g.id = c.guardian_id
+		LEFT JOIN LATERAL (
+			SELECT class, note, bag_status
+			FROM drop_offs
+			WHERE drop_offs.child_id = c.id
+			ORDER BY drop_off_time DESC
+			LIMIT 1
+		) d ON true
 		WHERE g.phone = ?
-	`, phone).Scan(&results).Error
+	`
 
+	err := db.Raw(query, phone).Scan(&results).Error
 	return results, err
 }
+

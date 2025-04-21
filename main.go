@@ -21,6 +21,26 @@ import (
 	"gorm.io/gorm"
 )
 
+
+func seedChurch(db *gorm.DB) {
+    existing := church.Church{}
+    if err := db.First(&existing).Error; err == nil {
+        log.Println("✅ Church already exists, skipping seeding.")
+        return
+    }
+
+    newChurch := church.Church{
+        Name:      "Living Word Church",
+        Address:   "123 Grace Avenue",
+        CreatedAt: time.Now(),
+    }
+
+    if err := db.Create(&newChurch).Error; err != nil {
+        log.Fatalf("❌ Failed to seed church: %v", err)
+    }
+
+    log.Println("✅ Seeded default church")
+}
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -36,20 +56,22 @@ func main() {
 	fmt.Println("Database connection established")
 
 
+
 	fmt.Println("Running AutoMigrations...")
 	if err := db.AutoMigrate(&church.Church{},
 		&guardian.Guardian{},
 		&child.Child{},
 		&dropoff.DropSession{},
 		&dropoff.DropOff{},		
+		&pickup.PickupSession{},
 		&pickup.Pickup{},
 		&user.User{},
 		&otp.OTPRequest{},); err != nil {
 		log.Fatalf("Migration failed: %v", err)
 	}
 	fmt.Println("Migrations completed!")
-
 	
+	seedChurch(db)
 
 	r := gin.Default()
 	
@@ -88,8 +110,8 @@ func main() {
 	dropoffHandler.RegisterRoutes(r)
 
 	pickupRepo := pickup.NewRepository()
-	pickupSvc := pickup.NewService(pickupRepo, dropOffSvc)
-	pickupHandler := pickup.NewHandler(db, pickupSvc)
+	pickupSvc := pickup.NewService(pickupRepo, dropoffRepo)
+	pickupHandler := pickup.NewHandler(db, pickupSvc, dropoffRepo)
 	pickupHandler.RegisterRoutes(r)
 
 	userRepo := user.NewRepository()

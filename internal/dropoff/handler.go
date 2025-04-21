@@ -25,6 +25,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 		group.GET("/session/:id", h.GetDropSessionByID)
 		group.GET("/session/code/:code", h.GetDropSessionByCode)
 		group.GET("/sessions", h.GetDropSessionsByDate)
+		group.POST("/confirm/:id", h.ConfirmPickup) 
 
 		group.GET("/session/:id/children", h.GetDropOffsBySessionID)
 		group.GET("/child/:id", h.GetDropOffByID)
@@ -149,4 +150,20 @@ func (h *Handler) GetDropSessionsByDate(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"data": sessions})
+}
+func (h *Handler) ConfirmPickup(c *gin.Context) {
+	idParam := c.Param("id")
+	sessionID, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid session ID"})
+		return
+	}
+
+	err = h.Service.MarkDropSessionPickedUp(h.DB, uint(sessionID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to confirm pickup"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Pickup confirmed successfully"})
 }
