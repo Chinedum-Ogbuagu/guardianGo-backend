@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/auth"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/child"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/church"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/dropoff"
@@ -59,6 +60,8 @@ func main() {
 
 	fmt.Println("Running AutoMigrations...")
 	if err := db.AutoMigrate(&church.Church{},
+		&auth.AuthRequest{},
+		&auth.AuthSession{},
 		&guardian.Guardian{},
 		&child.Child{},
 		&dropoff.DropSession{},
@@ -66,7 +69,8 @@ func main() {
 		&pickup.PickupSession{},
 		&pickup.Pickup{},
 		&user.User{},
-		&otp.OTPRequest{},); err != nil {
+		&otp.OTPRequest{},
+		&otp.OTPToken{},); err != nil {
 		log.Fatalf("Migration failed: %v", err)
 	}
 	fmt.Println("Migrations completed!")

@@ -2,7 +2,6 @@ package user
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -13,52 +12,47 @@ type Handler struct {
 	Service Service
 }
 
-func NewHandler(db *gorm.DB, s Service) *Handler {
-	return &Handler{DB: db, Service: s}
+func NewHandler(db *gorm.DB, service Service) *Handler {
+	return &Handler{DB: db, Service: service}
 }
 
 func (h *Handler) RegisterRoutes(r *gin.Engine) {
-	group := r.Group("/user")
+	group := r.Group("/api/users")
 	{
-		group.POST("/register", h.CreateUser)
-		group.GET("/:phone_number", h.GetUserByPhone)
-		group.GET("", h.ListUsersByChurch)
+		group.POST("/register", h.RegisterUser)
+		group.GET("/by-phone/:phone", h.GetUserByPhone)
 	}
 }
 
-func (h *Handler) CreateUser(c *gin.Context) {
-	var u User
-	if err := c.ShouldBindJSON(&u); err != nil {
+type RegisterUserRequest struct {
+	Name     string `json:"name" binding:"required"`
+	Phone    string `json:"phone" binding:"required"`
+	Role     Role   `json:"role" binding:"required"`
+	ChurchID uint   `json:"church_id" binding:"required"`
+}
+
+func (h *Handler) RegisterUser(c *gin.Context) {
+	var req RegisterUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.Service.Create(h.DB, &u); err != nil {
+
+	user, err := h.Service.RegisterUser(h.DB, req.Name, req.Phone, req.Role, req.ChurchID)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, u)
+
+	c.JSON(http.StatusOK, user)
 }
 
 func (h *Handler) GetUserByPhone(c *gin.Context) {
-	phone := c.Param("phone_number")
-	u, err := h.Service.GetByPhone(h.DB, phone)
+	phone := c.Param("phone")
+	user, err := h.Service.GetUserByPhone(h.DB, phone)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
-	c.JSON(http.StatusOK, u)
-}
-
-func (h *Handler) ListUsersByChurch(c *gin.Context) {
-	churchID, err := strconv.Atoi(c.Query("church_id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid church_id"})
-		return
-	}
-	users, err := h.Service.ListByChurch(h.DB, uint(churchID))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, users)
+	c.JSON(http.StatusOK, user)
 }

@@ -1,29 +1,24 @@
 package otp
 
-import (
-	"gorm.io/gorm"
-)
+import "gorm.io/gorm"
 
 type Repository interface {
-    SaveOTP(db *gorm.DB, otpRequest *OTPRequest) error
-    FindPinIDByPhoneNumber(db *gorm.DB, phoneNumber string) (*OTPRequest, error)
+	SaveOTP(db *gorm.DB, otp *OTPRequest) error
+	FindPinIDByPhoneNumber(db *gorm.DB, phone string, purpose string) (*OTPRequest, error)
 }
 
 type repository struct{}
 
 func NewRepository() Repository {
-    return &repository{}
+	return &repository{}
 }
 
-func (r *repository) SaveOTP(db *gorm.DB, otpRequest *OTPRequest) error {
-    
-    return db.Save(otpRequest).Error
+func (r *repository) SaveOTP(db *gorm.DB, otp *OTPRequest) error {
+	return db.Save(otp).Error
 }
 
-func (r *repository) FindPinIDByPhoneNumber(db *gorm.DB, phoneNumber string) (*OTPRequest, error) {
-    var otpRequest OTPRequest
-    if err := db.Where("phone_number = ?", phoneNumber).First(&otpRequest).Error; err != nil {
-        return nil, err
-    }
-    return &otpRequest, nil
+func (r *repository) FindPinIDByPhoneNumber(db *gorm.DB, phone string, purpose string) (*OTPRequest, error) {
+	var req OTPRequest
+	err := db.Where("phone_number = ?", phone).Order("created_at DESC").First(&req).Error
+	return &req, err
 }

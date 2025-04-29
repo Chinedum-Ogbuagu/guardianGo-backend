@@ -3,82 +3,68 @@ package auth
 import (
 	"net/http"
 
-	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/otp"
-	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/user"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 type Handler struct {
-	DB *gorm.DB
-	OTP otp.Service
-	userRepo user.Repository
+	DB      *gorm.DB
+	Service Service
 }
 
-func NewHandler(db *gorm.DB, otpService otp.Service, userRepo user.Repository) *Handler {
-	return &Handler{DB: db, OTP: otpService, userRepo: userRepo}
+func NewHandler(db *gorm.DB, service Service) *Handler {
+	return &Handler{DB: db, Service: service}
 }
-
 
 func (h *Handler) RegisterRoutes(r *gin.Engine) {
-	group := r.Group("/auth")
+	group := r.Group("/api/auth")
 	{
-		group.POST("/login", h.Login)
-		group.POST("/register", h.Verify)
+		group.POST("/request-otp", h.RequestOTP)
+		group.POST("/verify-otp", h.VerifyOTP)
 	}
 }
 
-func (h *Handler) Login(c *gin.Context) {
-	var req LoginRequest
+type RequestOTPBody struct {
+	Phone string `json:"phone" binding:"required"`
+	Name  string `json:"name" binding:"required"`
+	DropOffID uint   `json:"drop_off_id"` // optional, based on use case
+}
+
+func (h *Handler) RequestOTP(c *gin.Context) {
+	var req RequestOTPBody
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
 
-	_, err := h.userRepo.GetByPhone(h.DB, req.PhoneNumber)
+	err := h.Service.RequestOTP(h.DB, req.Phone, req.Name, req.DropOffID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}	
-
-	_, err = h.OTP.SendOTP(h.DB, req.PhoneNumber, "login", 0)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send OTP"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "OTP sent successfully"})
 }
 
-func (h *Handler) Verify(c *gin.Context) {
-	var req VerifyRequest
+type VerifyOTPBody struct {
+	Phone string `json:"phone" binding:"required"`
+	Code  string `json:"code" binding:"required"`
+	Name string `json:"name"` // optional, based on use case
+	Purpose string `json:"purpose"` // optional, based on use case
+}
+
+func (h *Handler) VerifyOTP(c *gin.Context) {
+	var req VerifyOTPBody
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	valid, err := h.OTP.VerifyOTP(h.DB, req.PhoneNumber, req.Code)
-	if err != nil || !valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired code"})
-		return
-	}
-
-	user, err := h.userRepo.GetByPhone(h.DB, req.PhoneNumber)
+	user, err := h.Service.VerifyOTPAndLogin(h.DB, req.Phone, req.Code, req.Name, req.Purpose)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid OTP"})
 		return
 	}
 
-	// In a real system, generate JWT or session
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
-		"user": gin.H{
-			"id": user.ID,
-			"name": user.Name,
-			"role": user.Role,
-			"church_id": user.ChurchID,
-		},
-	})
+	c.JSON(http.StatusOK, gin.H{"user": user})
 }

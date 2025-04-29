@@ -12,7 +12,7 @@ import (
 
 type Service interface {
     SendOTP(db *gorm.DB, phoneNumber string, purpose string, dropOffID uint) (*OTPRequest, error)
-    VerifyOTP(db *gorm.DB, phoneNumber string, code string) (bool, error)
+    VerifyOTP(db *gorm.DB, phoneNumber string, code, purpose string) (bool, error)
 }
 
 type service struct {
@@ -46,9 +46,10 @@ func (s *service) SendOTP(db *gorm.DB, phoneNumber string, purpose string, dropO
     return otpRequest, nil
 }
 
-func (s *service) VerifyOTP(db *gorm.DB, phoneNumber string, code string) (bool, error) {
+func (s *service) VerifyOTP(db *gorm.DB, phoneNumber string, code string, purpose string) (bool, error) {
+    
    
-    otpRequest, err := s.repo.FindPinIDByPhoneNumber(db, phoneNumber)
+    otpRequest, err := s.repo.FindPinIDByPhoneNumber(db, phoneNumber, purpose)
     if err != nil {
         return false, errors.New("phone number not found")
     }
@@ -67,11 +68,18 @@ func sendTermiiOTP(phone string) (string, error) {
     if termiiBaseUrl == "" {
         return "", errors.New("TERMII_BASE_URL is not set")
     }
-
+    
+    // Transform phone from local format to international format
+    // If phone starts with "0", replace it with "234" (Nigeria country code)
+    formattedPhone := phone
+    if len(phone) > 0 && phone[0] == '0' {
+        formattedPhone = "234" + phone[1:]
+    }
+    
     payload := map[string]interface{}{
         "api_key":            apiKey,
         "message_type":       "NUMERIC",
-        "to":                 "2349058652947",
+        "to":                 formattedPhone,
         "from":               "Child Safe",
         "channel":            "generic",
         "pin_attempts":       1,
@@ -81,7 +89,7 @@ func sendTermiiOTP(phone string) (string, error) {
         "message_text":       "Your ChildSafe code is < 123456 >",
         "pin_type":           "NUMERIC",
     }
-
+    
     data, _ := json.Marshal(payload)
     sendURL := termiiBaseUrl + "/api/sms/otp/send"
     res, err := http.Post(sendURL, "application/json", bytes.NewBuffer(data))
@@ -89,18 +97,18 @@ func sendTermiiOTP(phone string) (string, error) {
         return "", err
     }
     defer res.Body.Close()
-
+    
     if res.StatusCode >= 300 {
         return "", errors.New("failed to send OTP via Termii")
     }
-
+    
     var resp struct {
         PinID string `json:"pinId"`
     }
     if err := json.NewDecoder(res.Body).Decode(&resp); err != nil {
         return "", err
     }
-
+    
     return resp.PinID, nil
 }
 

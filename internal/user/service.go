@@ -1,29 +1,66 @@
 package user
 
-import "gorm.io/gorm"
+import (
+	"errors"
+
+	"gorm.io/gorm"
+)
 
 type Service interface {
-	Create(db *gorm.DB, u *User) error
-	GetByPhone(db *gorm.DB, phone string) (*User, error)
-	ListByChurch(db *gorm.DB, churchID uint) ([]User, error)
+	RegisterUser(db *gorm.DB, name, phone string, role Role, churchID uint) (*User, error)
+	GetUserByPhone(db *gorm.DB, phone string) (*User, error)
+	FindOrCreateUserByPhone(db *gorm.DB, phone string, name string) (*User, error)
 }
 
 type service struct {
 	repo Repository
 }
 
-func NewService(r Repository) Service {
-	return &service{repo: r}
+func NewService(repo Repository) Service {
+	return &service{repo: repo}
 }
 
-func (s *service) Create(db *gorm.DB, u *User) error {
-	return s.repo.Create(db, u)
+func (s *service) RegisterUser(db *gorm.DB, name, phone string, role Role, churchID uint) (*User, error) {
+	existing, err := s.repo.FindByPhone(db, phone)
+	if err == nil {
+		return existing, nil // Return existing user
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	user := &User{
+		Name:     name,
+		Phone:    phone,
+		Role:     role,
+		ChurchID: churchID,
+	}
+	if err := s.repo.Create(db, user); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
-func (s *service) GetByPhone(db *gorm.DB, phone string) (*User, error) {
-	return s.repo.GetByPhone(db, phone)
+func (s *service) GetUserByPhone(db *gorm.DB, phone string) (*User, error) {
+	return s.repo.FindByPhone(db, phone)
 }
-
-func (s *service) ListByChurch(db *gorm.DB, churchID uint) ([]User, error) {
-	return s.repo.ListByChurch(db, churchID)
+func (s *service) FindOrCreateUserByPhone(db *gorm.DB, phone, name string) (*User, error) {
+	user, err := s.repo.FindByPhone(db, phone)
+	if err == nil {
+		return user, nil
+	}
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// Default to RoleAttendant and ChurchID 0 for now (can adjust later)
+		newUser := &User{
+			Name:     name,
+			Phone:    phone,
+			Role:     RoleAttendant,
+			ChurchID: 0,
+		}
+		if err := s.repo.Create(db, newUser); err != nil {
+			return nil, err
+		}
+		return newUser, nil
+	}
+	return nil, err
 }
