@@ -2,6 +2,8 @@ package dropoff
 
 import (
 	"time"
+
+	"github.com/gofrs/uuid"
 )
 
 type DropSession struct {
@@ -10,7 +12,7 @@ type DropSession struct {
 	GuardianID uint      `json:"guardian_id"`
 	GuardianPhone string  `json:"guardian_phone"`
 	GuardianName string  `json:"guardian_name"`
-	ChurchID   uint      `json:"church_id"`
+	ChurchID  *uuid.UUID `json:"church_id"`
 	Note       string    `json:"note"`
 	CreatedAt  time.Time `json:"created_at"`
 	PickupStatus     string    `gorm:"default:'awaiting'" json:"pickup_status"` 

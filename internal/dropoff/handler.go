@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
 )
 
@@ -45,7 +46,7 @@ type ChildPayload struct {
 }
 
 type CreateDropSessionRequest struct {
-	ChurchID uint             `json:"church_id" binding:"required"`
+	ChurchID  *uuid.UUID          `json:"church_id" binding:"required"`
 	Note     string           `json:"note"`
 	Guardian GuardianPayload  `json:"guardian" binding:"required"`
 	Children []ChildPayload   `json:"children" binding:"required"`

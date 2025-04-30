@@ -17,20 +17,29 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/user"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 
-func seedChurch(db *gorm.DB) {
+func seedChurch(db *gorm.DB) uuid.UUID {
     existing := church.Church{}
     if err := db.First(&existing).Error; err == nil {
         log.Println("✅ Church already exists, skipping seeding.")
-        return
+        return existing.ID
     }
 
+    churchID, err := uuid.NewV4()
+    if err != nil {
+        log.Fatalf("❌ Failed to generate UUID for church: %v", err)
+    }
+
+    log.Printf("Generated Church UUID: %s", churchID.String())
+
     newChurch := church.Church{
+        ID:        churchID,
         Name:      "Living Word Church",
         Address:   "123 Grace Avenue",
         CreatedAt: time.Now(),
@@ -40,8 +49,38 @@ func seedChurch(db *gorm.DB) {
         log.Fatalf("❌ Failed to seed church: %v", err)
     }
 
-    log.Println("✅ Seeded default church")
+    log.Printf("✅ Seeded default church with ID: %s", churchID.String())
+    return churchID
 }
+
+func seedSuperAdmin(db *gorm.DB, churchID uuid.UUID) {
+    existing := user.User{}
+    if err := db.Where("role = ?", user.RoleSuperAdmin).First(&existing).Error; err == nil {
+        log.Println("✅ Super admin already exists, skipping seeding.")
+        return
+    }
+
+    userID, err := uuid.NewV4()
+    if err != nil {
+        log.Fatalf("❌ Failed to generate UUID for super admin: %v", err)
+    }
+
+    newUser := user.User{
+        ID:        userID,
+        Name:      "Chinedum Ogbuagu",
+        Phone:     "09058652947",
+        Role:      user.RoleSuperAdmin,
+        ChurchID:  &churchID,
+        CreatedAt: time.Now(),
+    }
+
+    if err := db.Create(&newUser).Error; err != nil {
+        log.Fatalf("❌ Failed to seed super admin: %v", err)
+    }
+
+    log.Printf("✅ Seeded super admin with ID: %s", userID.String())
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -56,7 +95,10 @@ func main() {
 	
 	fmt.Println("Database connection established")
 
-
+ if err := db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error; err != nil {
+        log.Fatalf("Failed to create uuid-ossp extension: %v", err)
+    }
+    fmt.Println("UUID extension enabled")
 
 	fmt.Println("Running AutoMigrations...")
 	if err := db.AutoMigrate(&church.Church{},
@@ -75,7 +117,8 @@ func main() {
 	}
 	fmt.Println("Migrations completed!")
 	
-	seedChurch(db)
+	churchID := seedChurch(db)
+    seedSuperAdmin(db, churchID)
 
 	r := gin.Default()
 	

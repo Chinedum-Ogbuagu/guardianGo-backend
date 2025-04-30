@@ -5,6 +5,7 @@ import "time"
 type AuthRequest struct {
 	Phone string `json:"phone" binding:"required"`
 	Name  string `json:"name" binding:"required"`
+	InviteCode string `json:"invite_code"`
 }
 
 type AuthSession struct {

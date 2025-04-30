@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gofrs/uuid"
 	"gorm.io/gorm"
 )
 
@@ -28,7 +29,7 @@ type RegisterUserRequest struct {
 	Name     string `json:"name" binding:"required"`
 	Phone    string `json:"phone" binding:"required"`
 	Role     Role   `json:"role" binding:"required"`
-	ChurchID uint   `json:"church_id" binding:"required"`
+	ChurchID uuid.UUID   `json:"church_id" binding:"required"`
 }
 
 func (h *Handler) RegisterUser(c *gin.Context) {

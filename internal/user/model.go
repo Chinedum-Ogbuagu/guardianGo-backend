@@ -1,20 +1,25 @@
 package user
 
-import "time"
+import (
+	"time"
+
+	uuid "github.com/gofrs/uuid"
+)
 
 type Role string
 
 const (
 	RoleSuperAdmin Role = "super_admin"
-	RoleAdmin      Role = "admin"
+	RoleChurchAdmin Role = "church_admin"
 	RoleAttendant  Role = "attendant"
+	RoleSecurity Role = "security"
 )
 
 type User struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
+	ID         uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	Name       string    `json:"name"`
 	Phone      string    `gorm:"uniqueIndex" json:"phone"`
 	Role       Role      `json:"role"`
-	ChurchID   uint      `json:"church_id"`
+	ChurchID  *uuid.UUID `json:"church_id"`
 	CreatedAt  time.Time `json:"created_at"`
 }
