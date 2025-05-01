@@ -11,7 +11,7 @@ type Repository interface {
 	// Drop Session operations
 	CreateDropSession(db *gorm.DB, ds *DropSession) error
 	GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, error)
-	GetDropSessionByCode(db *gorm.DB, code string) (*DropSession, error)
+	GetDropSessionByCode(db *gorm.DB, code string) ([]*DropSession, error)
 	GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error)
 	CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error)
 	UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error
@@ -41,12 +41,12 @@ func (r *repository) GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, err
 	return &ds, nil
 }
 
-func (r *repository) GetDropSessionByCode(db *gorm.DB, code string) (*DropSession, error) {
-	var ds DropSession
-	if err := db.Preload("DropOffs").Where("unique_code = ?", code).First(&ds).Error; err != nil {
+func (r *repository) GetDropSessionByCode(db *gorm.DB, code string) ([]*DropSession, error) {
+	var dropSessions []*DropSession
+	if err := db.Preload("DropOffs").Where("unique_code LIKE ?", "%"+code+"%").Find(&dropSessions).Error; err != nil {
 		return nil, err
 	}
-	return &ds, nil
+	return dropSessions, nil
 }
 
 func (r *repository) CreateDropOff(db *gorm.DB, d *DropOff) error {

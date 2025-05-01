@@ -10,7 +10,7 @@ import (
 
 type Service interface {
 	RequestOTP(db *gorm.DB, phone string, name string, dropOffID uint) error
-	VerifyOTPAndLogin(db *gorm.DB, phone, otpCode string, name string, purpose string) (*user.User, error)
+	VerifyOTPAndLogin(db *gorm.DB, phone, otpCode string, name string, purpose string) (*user.User, string, error)
 }
 
 type service struct {
@@ -30,20 +30,22 @@ func (s *service) RequestOTP(db *gorm.DB, phone string, name string, dropOffID u
 	return err
 }
 
-func (s *service) VerifyOTPAndLogin(db *gorm.DB, phone, otpCode string, name string, purpose string) (*user.User, error) {
+func (s *service) VerifyOTPAndLogin(db *gorm.DB, phone, otpCode string, name string, purpose string) (*user.User, string, error) {
 	isValid, err := s.otpService.VerifyOTP(db, phone, otpCode, purpose)
-	if err != nil {
-		return nil, err
-	}
-	if !isValid {
-		return nil, errors.New("invalid or expired OTP")
+	if err != nil || !isValid {
+		return nil, "", errors.New("invalid or expired OTP")
 	}
 
-	
-	foundUser, err := s.userService.FindOrCreateUserByPhone(db, phone, name)
+	foundUser, err := s.userService.GetUserByPhone(db, phone)
 	if err != nil {
-		return nil, err
+		return nil, "", errors.New("user not found")
 	}
 
-	return foundUser, nil
+	token, err := GenerateJWT(foundUser.ID, foundUser.Role)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return foundUser, token, nil
 }
+

@@ -60,11 +60,14 @@ func (h *Handler) VerifyOTP(c *gin.Context) {
 		return
 	}
 
-	user, err := h.Service.VerifyOTPAndLogin(h.DB, req.Phone, req.Code, req.Name, req.Purpose)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid OTP"})
-		return
-	}
+	user, token, err := h.Service.VerifyOTPAndLogin(h.DB, req.Phone, req.Code, req.Name, req.Purpose)
+if err != nil {
+	c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	return
+}
 
-	c.JSON(http.StatusOK, gin.H{"user": user})
+c.JSON(http.StatusOK, gin.H{
+	"user":  user,
+	"token": token,
+})
 }

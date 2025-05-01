@@ -136,6 +136,8 @@ func main() {
 	}))
 
 	
+
+	
 	churchRepo := church.NewRepository()
 	churchSvc := church.NewService(churchRepo)
 	churchHandler := church.NewHandler(db, churchSvc)
@@ -176,6 +178,11 @@ func main() {
 	otpSvc := otp.NewService(otpRepo)
 	otpHandler := otp.NewHandler(db, otpSvc)
 	otpHandler.RegisterRoutes(r)
+
+	
+	authSvc := auth.NewService( otpSvc, userSvc)
+	authHandler := auth.NewHandler(db, authSvc)
+	authHandler.RegisterRoutes(r)
 
 	r.Run()
 }
