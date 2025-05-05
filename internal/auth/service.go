@@ -26,9 +26,20 @@ func NewService(otpService otp.Service, userService user.Service) Service {
 }
 
 func (s *service) RequestOTP(db *gorm.DB, phone string, name string, dropOffID uint) error {
-	_, err := s.otpService.SendOTP(db, phone, "login", dropOffID)
+	// Check if user exists first
+	_, err := s.userService.GetUserByPhone(db, phone)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("user not found")
+		}
+		return err // Return DB or other internal errors
+	}
+
+	// Proceed to send OTP only if user exists
+	_, err = s.otpService.SendOTP(db, phone, "login", dropOffID)
 	return err
 }
+
 
 func (s *service) VerifyOTPAndLogin(db *gorm.DB, phone, otpCode string, name string, purpose string) (*user.User, string, error) {
 	isValid, err := s.otpService.VerifyOTP(db, phone, otpCode, purpose)
