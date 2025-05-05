@@ -44,7 +44,18 @@ type ChildPayload struct {
 	Bag      bool   `json:"bag"`
 	Note     string `json:"note"`
 }
+type Pagination struct {
+	Page     int `form:"page,default=0"`
+	PageSize int `form:"page_size,default=0"`
+}
 
+
+type PaginatedResponse struct {
+	Data       interface{} `json:"data"`
+	TotalCount int64       `json:"total_count"`
+	Page       int         `json:"page"`
+	PageSize   int         `json:"page_size"`
+}
 type CreateDropSessionRequest struct {
 	ChurchID  *uuid.UUID          `json:"church_id" binding:"required"`
 	Note     string           `json:"note"`
@@ -132,6 +143,14 @@ func (h *Handler) GetDropOffByID(c *gin.Context) {
 }
 
 func (h *Handler) GetDropSessionsByDate(c *gin.Context) {
+	var pagination Pagination
+	if err := c.ShouldBindQuery(&pagination); err != nil {
+		// If binding fails, it means pagination parameters might be missing
+		// We will proceed with default/zero values for pagination,
+		// which will fetch all records.
+		pagination = Pagination{} // Initialize with default zero values
+	}
+
 	dateParam := c.Query("date")
 	if dateParam == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required date parameter (YYYY-MM-DD)"})
@@ -140,17 +159,27 @@ func (h *Handler) GetDropSessionsByDate(c *gin.Context) {
 
 	parsedDate, err := time.Parse("2006-01-02", dateParam)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use YYYY-MM-DD"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use<ctrl98>-MM-DD"})
 		return
 	}
 
-	sessions, err := h.Service.GetDropSessionsByDate(h.DB, parsedDate)
+	sessions, totalCount, err := h.Service.GetDropSessionsByDate(h.DB, parsedDate, pagination)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": sessions})
+	// Conditionally format the response based on whether pagination was used
+	if pagination.Page > 0 && pagination.PageSize > 0 {
+		c.JSON(http.StatusOK, PaginatedResponse{
+			Data:       sessions,
+			TotalCount: totalCount,
+			Page:       pagination.Page,
+			PageSize:   pagination.PageSize,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"data": sessions})
+	}
 }
 func (h *Handler) ConfirmPickup(c *gin.Context) {
 	idParam := c.Param("id")

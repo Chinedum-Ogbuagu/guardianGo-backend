@@ -12,7 +12,7 @@ type Repository interface {
 	CreateDropSession(db *gorm.DB, ds *DropSession) error
 	GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, error)
 	GetDropSessionByCode(db *gorm.DB, code string) ([]*DropSession, error)
-	GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error)
+	GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error)
 	CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error)
 	UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error
 
@@ -22,6 +22,8 @@ type Repository interface {
 	GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error)
 	GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error)
 }
+
+
 
 type repository struct{}
 
@@ -61,20 +63,40 @@ func (r *repository) GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error) {
 	return &d, nil
 }
 
-func (r *repository) GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error) {
+func (r *repository) GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error) {
 	var sessions []DropSession
+	var totalCount int64
 	loc, _ := time.LoadLocation("Africa/Lagos")
 	date = date.In(loc)
 	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, loc)
 	end := start.Add(24 * time.Hour)
 
-	if err := db.Preload("DropOffs").
-		Where("created_at >= ? AND created_at < ?", start, end).
-		Find(&sessions).Error; err != nil {
-		return nil, err
+	query := db.Preload("DropOffs").
+		Where("created_at >= ? AND created_at < ?", start, end)
+
+	// Conditionally apply pagination if parameters are provided
+	if pagination.Page > 0 && pagination.PageSize > 0 {
+		if err := db.Model(&DropSession{}).
+			Where("created_at >= ? AND created_at < ?", start, end).
+			Count(&totalCount).Error; err != nil {
+			return nil, 0, err
+		}
+		offset := (pagination.Page - 1) * pagination.PageSize
+		query = query.Offset(offset).Limit(pagination.PageSize)
+	} else {
+		// If no pagination parameters, get all records
+		if err := db.Model(&DropSession{}).
+			Where("created_at >= ? AND created_at < ?", start, end).
+			Count(&totalCount).Error; err != nil {
+			return nil, 0, err
+		}
 	}
 
-	return sessions, nil
+	if err := query.Find(&sessions).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return sessions, totalCount, nil
 }
 
 

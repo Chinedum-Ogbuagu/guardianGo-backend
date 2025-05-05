@@ -37,7 +37,7 @@ type Service interface {
 	GetDropSessionByCode(db *gorm.DB, code string) ([]*DropSession, error)
 	GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error)
 	GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error)
-	GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error)
+	GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error)
 	MarkDropSessionPickedUp(db *gorm.DB, sessionID uint) error
 }
 
@@ -155,8 +155,8 @@ func (s *service) GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff
 func (s *service) GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error) {
 	return s.dropRepo.GetDropOffByID(db, id)
 }
-func (s *service) GetDropSessionsByDate(db *gorm.DB, date time.Time) ([]DropSession, error) {
-	return s.dropRepo.GetDropSessionsByDate(db, date)
+func (s *service) GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error) {
+	return s.dropRepo.GetDropSessionsByDate(db, date, pagination)
 }
 
 func (s *service) MarkDropSessionPickedUp(db *gorm.DB, sessionID uint) error {
