@@ -14,6 +14,7 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/otp"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/pickup"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/security"
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/sms"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/user"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -105,6 +106,7 @@ func main() {
 		&auth.AuthRequest{},
 		&auth.AuthSession{},
 		&guardian.Guardian{},
+		&sms.SMSLog{},
 		&child.Child{},
 		&dropoff.DropSession{},
 		&dropoff.DropOff{},		
@@ -136,6 +138,10 @@ func main() {
 	}))
 
 	
+	smsRepo := sms.NewRepository()
+	smsService := sms.NewService(smsRepo)
+	smsHandler := sms.NewHandler(db, smsService)
+	smsHandler.RegisterRoutes(r)
 
 	
 	churchRepo := church.NewRepository()
