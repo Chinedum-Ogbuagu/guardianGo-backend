@@ -39,7 +39,7 @@ func (h *Handler) RequestOTP(c *gin.Context) {
 
 	err := h.Service.RequestOTP(h.DB, req.Phone, req.Name, req.DropOffID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send OTP"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Login failed"})
 		return
 	}
 
