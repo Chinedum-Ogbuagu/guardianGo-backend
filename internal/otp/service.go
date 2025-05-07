@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -137,8 +138,21 @@ func verifyTermiiOTP(pinID, code string) (bool, error) {
     defer res.Body.Close()
 
     if res.StatusCode >= 300 {
-        return false, nil
+        return false, fmt.Errorf("termii API returned status code: %d", res.StatusCode)
     }
-
-    return true, nil
+    
+    // Parse the response
+    var termiiResponse struct {
+        Verified         bool   `json:"verified"`
+        PinID           string `json:"pinId"`
+        Msisdn          string `json:"msisdn"`
+        AttemptsRemaining int    `json:"attemptsRemaining"`
+    }
+    
+    if err := json.NewDecoder(res.Body).Decode(&termiiResponse); err != nil {
+        return false, fmt.Errorf("failed to decode termii response: %w", err)
+    }
+    
+    // Return the actual verification status from the response
+    return termiiResponse.Verified, nil
 }
