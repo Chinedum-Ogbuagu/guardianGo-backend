@@ -10,9 +10,10 @@ import (
 
 var jwtSecret = []byte("your-secret-key") // use env var in production
 
-func GenerateJWT(userID uuid.UUID, role user.Role,) (string, error) {
+func GenerateJWT(userID uuid.UUID, role user.Role, church_id uuid.UUID) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
+		"church_id": church_id,
 		"role":    role,
 		"exp":     time.Now().Add(24 * time.Hour).Unix(),
 	}

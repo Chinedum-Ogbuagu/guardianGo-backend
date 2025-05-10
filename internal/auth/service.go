@@ -52,7 +52,7 @@ func (s *service) VerifyOTPAndLogin(db *gorm.DB, phone, otpCode string, name str
 		return nil, "", errors.New("user not found")
 	}
 
-	token, err := GenerateJWT(foundUser.ID, foundUser.Role)
+	token, err := GenerateJWT(foundUser.ID, foundUser.Role, *foundUser.ChurchID)
 	if err != nil {
 		return nil, "", err
 	}

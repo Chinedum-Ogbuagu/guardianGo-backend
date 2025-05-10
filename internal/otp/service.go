@@ -79,15 +79,15 @@ func sendTermiiOTP(phone string) (string, error) {
     
     payload := map[string]interface{}{
         "api_key":            apiKey,
-        "message_type":       "NUMERIC",
+        "message_type":       "ALPHANUMERIC",
         "to":                 formattedPhone,
         "from":               "Child Safe",
         "channel":            "generic",
-        "pin_attempts":       1,
-        "pin_time_to_live":   20,
+        "pin_attempts":       3,
+        "pin_time_to_live":   2,
         "pin_length":         5,
         "pin_placeholder":    "< 123456 >",
-        "message_text":       "Your ChildSafe code is < 123456 >",
+        "message_text":       "Your ChildSafe code is < 123456 > it expires in two minutes",
         "pin_type":           "NUMERIC",
     }
     

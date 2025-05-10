@@ -74,8 +74,8 @@ func (h *Handler) VerifyOTP(c *gin.Context) {
 		3600*24, // 1 day
 		"/",
 		"",    // domain
-		true,  // secure (HTTPS)
-		true,  // HttpOnly
+		false,  // secure (HTTPS)
+		false,  // HttpOnly
 	)
 
 	c.JSON(http.StatusOK, gin.H{"message": "login successful", "user": user})
@@ -83,6 +83,6 @@ func (h *Handler) VerifyOTP(c *gin.Context) {
 
 func (h *Handler) Logout(c *gin.Context) {
 	// Invalidate the cookie
-	c.SetCookie("auth_token", "", -1, "/", "", true, true)
+	c.SetCookie("auth_token", "", -1, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
