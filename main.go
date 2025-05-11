@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -16,6 +17,10 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/security"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/sms"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/user"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gofrs/uuid"
@@ -24,7 +29,44 @@ import (
 	"gorm.io/gorm"
 )
 
+func GetSignedUploadURL(c *gin.Context) {
+	filename := c.Query("filename")
+	if filename == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "filename is required"})
+		return
+	}
 
+	// DigitalOcean Spaces endpoint and region
+	spacesEndpoint := "https://guardiango-storage.nyc3.digitaloceanspaces.com"
+	region := "nyc-3" // still needed even for DO
+
+	sess := session.Must(session.NewSession(&aws.Config{
+		Region:           aws.String(region),
+		Endpoint:         aws.String(spacesEndpoint),
+		S3ForcePathStyle: aws.Bool(true),
+		Credentials: credentials.NewStaticCredentials(
+			os.Getenv("DO_SPACES_KEY"),    // your access key
+			os.Getenv("DO_SPACES_SECRET"), // your secret key
+			"",
+		),
+	}))
+
+	s3Client := s3.New(sess)
+
+	req, _ := s3Client.PutObjectRequest(&s3.PutObjectInput{
+		Bucket: aws.String("guardiango-storage"),
+		Key:    aws.String("uploads/" + filename),
+		ACL:    aws.String("public-read"), // optional
+	})
+
+	signedURL, err := req.Presign(15 * time.Minute)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
+		return
+	}
+println("Signed URL:", signedURL)
+	c.JSON(http.StatusOK, gin.H{"url": signedURL})
+}
 func seedChurch(db *gorm.DB) uuid.UUID {
     existing := church.Church{}
     if err := db.First(&existing).Error; err == nil {
@@ -127,7 +169,7 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
-
+	
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"}, 
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -136,7 +178,7 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-
+	r.GET("/api/upload-url", GetSignedUploadURL)
 	
 	smsRepo := sms.NewRepository()
 	smsService := sms.NewService(smsRepo)

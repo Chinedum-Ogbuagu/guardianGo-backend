@@ -15,6 +15,8 @@ type Repository interface {
 	GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error)
 	CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error)
 	UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error
+	UpdateDropSessionImageURL(db *gorm.DB, sessionID string, imageURL string) error
+
 
 
 	// Drop Off operations
@@ -62,6 +64,12 @@ func (r *repository) GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error) {
 	}
 	return &d, nil
 }
+func (r *repository) UpdateDropSessionImageURL(db *gorm.DB, sessionID string, photoURL string) error {
+	return db.Model(&DropSession{}).
+		Where("unique_code = ?", sessionID).
+		Update("photo_url", photoURL).Error
+}
+
 
 func (r *repository) GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error) {
 	var sessions []DropSession

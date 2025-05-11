@@ -39,6 +39,7 @@ type Service interface {
 	GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error)
 	GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error)
 	MarkDropSessionPickedUp(db *gorm.DB, sessionID uint) error
+	UpdateDropSessionImageURL(db *gorm.DB, sessionID string, photoURL string) (error)
 }
 
 type service struct {
@@ -163,4 +164,8 @@ func (s *service) MarkDropSessionPickedUp(db *gorm.DB, sessionID uint) error {
 	return db.Model(&DropSession{}).
 		Where("id = ?", sessionID).
 		Update("pickup_status", "completed").Error
+}
+func (s *service) UpdateDropSessionImageURL(db *gorm.DB, sessionID string, photoURL string) error {
+	println("Updating photo URL for session ID:", sessionID, "to", photoURL)
+	return s.dropRepo.UpdateDropSessionImageURL(db, sessionID, photoURL)
 }

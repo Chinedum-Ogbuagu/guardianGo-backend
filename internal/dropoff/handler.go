@@ -27,6 +27,8 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 		group.GET("/session/code/:code", h.GetDropSessionByCode)
 		group.GET("/sessions", h.GetDropSessionsByDate)
 		group.POST("/confirm/:id", h.ConfirmPickup) 
+		group.PUT("/session/:id/image", h.UpdateDropSessionImage)
+
 
 		group.GET("/session/:id/children", h.GetDropOffsBySessionID)
 		group.GET("/child/:id", h.GetDropOffByID)
@@ -47,6 +49,9 @@ type ChildPayload struct {
 type Pagination struct {
 	Page     int `form:"page,default=0"`
 	PageSize int `form:"page_size,default=0"`
+}
+type UpdateImageRequest struct {
+	PhotoURL string `json:"photo_url" binding:"required"`
 }
 
 
@@ -101,13 +106,13 @@ func (h *Handler) GetDropSessionByID(c *gin.Context) {
 func (h *Handler) GetDropSessionByCode(c *gin.Context) {
 	code := c.Param("code")
 
-	dropSession, err := h.Service.GetDropSessionByCode(h.DB, code)
+	sessions, err := h.Service.GetDropSessionByCode(h.DB, code)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "drop session not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, dropSession)
+	c.JSON(http.StatusOK, sessions)
 }
 
 func (h *Handler) GetDropOffsBySessionID(c *gin.Context) {
@@ -196,4 +201,22 @@ func (h *Handler) ConfirmPickup(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Pickup confirmed successfully"})
+}
+
+func (h *Handler) UpdateDropSessionImage(c *gin.Context) {
+	sessionID := c.Param("id")
+
+	var req UpdateImageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.Service.UpdateDropSessionImageURL(h.DB, sessionID, req.PhotoURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Photo URL updated successfully"})
 }

@@ -10,6 +10,7 @@ type DropSession struct {
 	ID         uint      `gorm:"primaryKey" json:"id"`
 	UniqueCode string    `json:"unique_code"`
 	GuardianID uint      `json:"guardian_id"`
+	PhotoURL   string    `json:"photo_url"`
 	GuardianPhone string  `json:"guardian_phone"`
 	GuardianName string  `json:"guardian_name"`
 	ChurchID  *uuid.UUID `json:"church_id"`
