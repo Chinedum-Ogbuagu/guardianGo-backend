@@ -11,7 +11,7 @@ type Repository interface {
 	// Drop Session operations
 	CreateDropSession(db *gorm.DB, ds *DropSession) error
 	GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, error)
-	GetDropSessionByCode(db *gorm.DB, code string) ([]*DropSession, error)
+	GetDropSessionByCode(db *gorm.DB, date time.Time, code string) ([]*DropSession, error)
 	GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error)
 	CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error)
 	UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error
@@ -45,13 +45,22 @@ func (r *repository) GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, err
 	return &ds, nil
 }
 
-func (r *repository) GetDropSessionByCode(db *gorm.DB, code string) ([]*DropSession, error) {
+func (r *repository) GetDropSessionByCode(db *gorm.DB, date time.Time, code string) ([]*DropSession, error) {
 	var dropSessions []*DropSession
-	if err := db.Preload("DropOffs").Where("unique_code LIKE ?", "%"+code+"%").Find(&dropSessions).Error; err != nil {
+
+	loc, _ := time.LoadLocation("Africa/Lagos")
+	date = date.In(loc)
+	start := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, loc)
+	end := start.Add(24 * time.Hour)
+
+	if err := db.Preload("DropOffs").
+		Where("unique_code LIKE ? AND created_at >= ? AND created_at < ?", "%"+code+"%", start, end).
+		Find(&dropSessions).Error; err != nil {
 		return nil, err
 	}
 	return dropSessions, nil
 }
+
 
 func (r *repository) CreateDropOff(db *gorm.DB, d *DropOff) error {
 	return db.Create(d).Error

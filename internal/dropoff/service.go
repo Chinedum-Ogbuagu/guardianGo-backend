@@ -34,7 +34,7 @@ type ChildInput struct {
 type Service interface {
 	CreateDropSession(db *gorm.DB, req CreateDropSessionRequest) (*DropSession, error)
 	GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, error)
-	GetDropSessionByCode(db *gorm.DB, code string) ([]*DropSession, error)
+	GetDropSessionByCode(db *gorm.DB, date time.Time, code string) ([]*DropSession, error)
 	GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error)
 	GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error)
 	GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error)
@@ -145,8 +145,8 @@ func (s *service) GetDropSessionByID(db *gorm.DB, id uint) (*DropSession, error)
 	return s.dropRepo.GetDropSessionByID(db, id)
 }
 
-func (s *service) GetDropSessionByCode(db *gorm.DB, code string) ([]*DropSession, error) {
-	return s.dropRepo.GetDropSessionByCode(db, code)
+func (s *service) GetDropSessionByCode(db *gorm.DB, date time.Time, code string) ([]*DropSession, error) {
+	return s.dropRepo.GetDropSessionByCode(db, date, code)
 }
 
 func (s *service) GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error) {

@@ -105,8 +105,19 @@ func (h *Handler) GetDropSessionByID(c *gin.Context) {
 
 func (h *Handler) GetDropSessionByCode(c *gin.Context) {
 	code := c.Param("code")
+	dateParam := c.Query("date")
+	if dateParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing required date parameter (YYYY-MM-DD)"})
+		return
+	}
 
-	sessions, err := h.Service.GetDropSessionByCode(h.DB, code)
+	parsedDate, err := time.Parse("2006-01-02", dateParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use<ctrl98>-MM-DD"})
+		return
+	}
+
+	sessions, err := h.Service.GetDropSessionByCode(h.DB, parsedDate, code)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "drop session not found"})
 		return
