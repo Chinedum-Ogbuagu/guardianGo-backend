@@ -55,6 +55,7 @@ type Service interface {
 	GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error)
 	MarkDropSessionPickedUp(db *gorm.DB, sessionID uint) error
 	UpdateDropSessionImageURL(db *gorm.DB, sessionID string, photoURL string) error
+	AddChildrenToDropSession(db *gorm.DB, sessionID string, children []ChildInput) ([]DropOff, error)
 }
 
 type service struct {
@@ -220,4 +221,52 @@ func (s *service) MarkDropSessionPickedUp(db *gorm.DB, sessionID uint) error {
 func (s *service) UpdateDropSessionImageURL(db *gorm.DB, sessionID string, photoURL string) error {
 	println("Updating photo URL for session ID:", sessionID, "to", photoURL)
 	return s.dropRepo.UpdateDropSessionImageURL(db, sessionID, photoURL)
+}
+func (s *service) AddChildrenToDropSession(db *gorm.DB, sessionID string, children []ChildInput) ([]DropOff, error) {
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	session, err := s.dropRepo.GetDropSessionByUniqueCode(tx, sessionID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	guardianID := session.GuardianID
+	var dropOffs []DropOff
+	for _, childInput := range children {
+		childEntity, err := s.childRepo.FindOrCreateChild(tx, childInput.Name, childInput.Class, guardianID)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+		dropOff := DropOff{
+			DropSessionID: session.ID,
+			ChildID:       childEntity.ID,
+			ChildName:     childEntity.Name,
+			Class:         childInput.Class,
+			BagStatus:     childInput.Bag,
+			Note:          childInput.Note,
+			DropOffTime:   time.Now(),
+			CreatedAt:     time.Now(),
+		}
+
+		if err := s.dropRepo.CreateDropOff(tx, &dropOff); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+		dropOffs = append(dropOffs, dropOff)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
+	return dropOffs, nil
 }

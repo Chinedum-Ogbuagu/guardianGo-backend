@@ -6,7 +6,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
 type Repository interface {
 	// Drop Session operations
 	CreateDropSession(db *gorm.DB, ds *DropSession) error
@@ -17,16 +16,13 @@ type Repository interface {
 	UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error
 	UpdateDropSessionImageURL(db *gorm.DB, sessionID string, imageURL string) error
 	VerifyPickupSecret(db *gorm.DB, code string, secret string) (*DropSession, error)
-
-
+	GetDropSessionByUniqueCode(db *gorm.DB, code string) (*DropSession, error)
 
 	// Drop Off operations
 	CreateDropOff(db *gorm.DB, d *DropOff) error
 	GetDropOffByID(db *gorm.DB, id uint) (*DropOff, error)
 	GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error)
 }
-
-
 
 type repository struct{}
 
@@ -62,6 +58,11 @@ func (r *repository) GetDropSessionByCode(db *gorm.DB, date time.Time, code stri
 	return dropSessions, nil
 }
 
+func (r *repository) GetDropSessionByUniqueCode(db *gorm.DB, code string) (*DropSession, error) {
+	var session DropSession
+	err := db.Where("unique_code = ?", code).First(&session).Error
+	return &session, err
+}
 
 func (r *repository) CreateDropOff(db *gorm.DB, d *DropOff) error {
 	return db.Create(d).Error
@@ -79,7 +80,6 @@ func (r *repository) UpdateDropSessionImageURL(db *gorm.DB, sessionID string, ph
 		Where("unique_code = ?", sessionID).
 		Update("photo_url", photoURL).Error
 }
-
 
 func (r *repository) GetDropSessionsByDate(db *gorm.DB, date time.Time, pagination Pagination) ([]DropSession, int64, error) {
 	var sessions []DropSession
@@ -117,7 +117,6 @@ func (r *repository) GetDropSessionsByDate(db *gorm.DB, date time.Time, paginati
 	return sessions, totalCount, nil
 }
 
-
 func (r *repository) GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]DropOff, error) {
 	var dropOffs []DropOff
 	if err := db.Where("drop_session_id = ?", sessionID).Find(&dropOffs).Error; err != nil {
@@ -125,7 +124,6 @@ func (r *repository) GetDropOffsBySessionID(db *gorm.DB, sessionID uint) ([]Drop
 	}
 	return dropOffs, nil
 }
-
 
 func (r *repository) CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error) {
 	var count int64

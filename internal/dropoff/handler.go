@@ -32,6 +32,8 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 
 		group.GET("/session/:id/children", h.GetDropOffsBySessionID)
 		group.GET("/child/:id", h.GetDropOffByID)
+		group.PUT("/session/code/:code/children", h.AddChildrenToDropSession)
+
 	}
 }
 
@@ -247,4 +249,24 @@ func (h *Handler) VerifyPickupSecret(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"session": session})
+}
+func (h *Handler) AddChildrenToDropSession(c *gin.Context) {
+	code := c.Param("code")
+
+	var req struct {
+		Children []ChildInput `json:"children"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	dropOffs, err := h.Service.AddChildrenToDropSession(h.DB, code, req.Children)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dropOffs)
 }
