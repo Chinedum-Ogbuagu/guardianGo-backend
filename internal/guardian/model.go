@@ -3,8 +3,9 @@ package guardian
 import "time"
 
 type Guardian struct {
-	ID        uint     `gorm:"primaryKey" json:"id"`
-	Name      string   `json:"name"`
-	Phone     string   `gorm:"uniqueIndex" json:"phone_number"`
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Name      string    `json:"name"`
+	Phone     string    `gorm:"uniqueIndex" json:"phone_number"`
+	Email     string    `json:"guardianEmail"`
 	CreatedAt time.Time `json:"created_at"`
 }

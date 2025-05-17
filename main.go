@@ -12,6 +12,7 @@ import (
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/church"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/dropoff"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/guardian"
+	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/messaging"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/otp"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/pickup"
 	"github.com/Chinedum-Ogbuagu/guardianGo-backend.git/internal/security"
@@ -64,64 +65,64 @@ func GetSignedUploadURL(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to sign URL"})
 		return
 	}
-println("Signed URL:", signedURL)
+	println("Signed URL:", signedURL)
 	c.JSON(http.StatusOK, gin.H{"url": signedURL})
 }
 func seedChurch(db *gorm.DB) uuid.UUID {
-    existing := church.Church{}
-    if err := db.First(&existing).Error; err == nil {
-        log.Println("✅ Church already exists, skipping seeding.")
-        return existing.ID
-    }
+	existing := church.Church{}
+	if err := db.First(&existing).Error; err == nil {
+		log.Println("✅ Church already exists, skipping seeding.")
+		return existing.ID
+	}
 
-    churchID, err := uuid.NewV4()
-    if err != nil {
-        log.Fatalf("❌ Failed to generate UUID for church: %v", err)
-    }
+	churchID, err := uuid.NewV4()
+	if err != nil {
+		log.Fatalf("❌ Failed to generate UUID for church: %v", err)
+	}
 
-    log.Printf("Generated Church UUID: %s", churchID.String())
+	log.Printf("Generated Church UUID: %s", churchID.String())
 
-    newChurch := church.Church{
-        ID:        churchID,
-        Name:      "Living Word Church",
-        Address:   "123 Grace Avenue",
-        CreatedAt: time.Now(),
-    }
+	newChurch := church.Church{
+		ID:        churchID,
+		Name:      "Living Word Church",
+		Address:   "123 Grace Avenue",
+		CreatedAt: time.Now(),
+	}
 
-    if err := db.Create(&newChurch).Error; err != nil {
-        log.Fatalf("❌ Failed to seed church: %v", err)
-    }
+	if err := db.Create(&newChurch).Error; err != nil {
+		log.Fatalf("❌ Failed to seed church: %v", err)
+	}
 
-    log.Printf("✅ Seeded default church with ID: %s", churchID.String())
-    return churchID
+	log.Printf("✅ Seeded default church with ID: %s", churchID.String())
+	return churchID
 }
 
 func seedSuperAdmin(db *gorm.DB, churchID uuid.UUID) {
-    existing := user.User{}
-    if err := db.Where("role = ?", user.RoleSuperAdmin).First(&existing).Error; err == nil {
-        log.Println("✅ Super admin already exists, skipping seeding.")
-        return
-    }
+	existing := user.User{}
+	if err := db.Where("role = ?", user.RoleSuperAdmin).First(&existing).Error; err == nil {
+		log.Println("✅ Super admin already exists, skipping seeding.")
+		return
+	}
 
-    userID, err := uuid.NewV4()
-    if err != nil {
-        log.Fatalf("❌ Failed to generate UUID for super admin: %v", err)
-    }
+	userID, err := uuid.NewV4()
+	if err != nil {
+		log.Fatalf("❌ Failed to generate UUID for super admin: %v", err)
+	}
 
-    newUser := user.User{
-        ID:        userID,
-        Name:      "Chinedum Ogbuagu",
-        Phone:     "09058652947",
-        Role:      user.RoleSuperAdmin,
-        ChurchID:  &churchID,
-        CreatedAt: time.Now(),
-    }
+	newUser := user.User{
+		ID:        userID,
+		Name:      "Chinedum Ogbuagu",
+		Phone:     "09058652947",
+		Role:      user.RoleSuperAdmin,
+		ChurchID:  &churchID,
+		CreatedAt: time.Now(),
+	}
 
-    if err := db.Create(&newUser).Error; err != nil {
-        log.Fatalf("❌ Failed to seed super admin: %v", err)
-    }
+	if err := db.Create(&newUser).Error; err != nil {
+		log.Fatalf("❌ Failed to seed super admin: %v", err)
+	}
 
-    log.Printf("✅ Seeded super admin with ID: %s", userID.String())
+	log.Printf("✅ Seeded super admin with ID: %s", userID.String())
 }
 
 func main() {
@@ -135,13 +136,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	
+
 	fmt.Println("Database connection established")
 
- if err := db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error; err != nil {
-        log.Fatalf("Failed to create uuid-ossp extension: %v", err)
-    }
-    fmt.Println("UUID extension enabled")
+	if err := db.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").Error; err != nil {
+		log.Fatalf("Failed to create uuid-ossp extension: %v", err)
+	}
+	fmt.Println("UUID extension enabled")
 
 	fmt.Println("Running AutoMigrations...")
 	if err := db.AutoMigrate(&church.Church{},
@@ -151,27 +152,27 @@ func main() {
 		&sms.SMSLog{},
 		&child.Child{},
 		&dropoff.DropSession{},
-		&dropoff.DropOff{},		
+		&dropoff.DropOff{},
 		&pickup.PickupSession{},
 		&pickup.Pickup{},
 		&user.User{},
 		&otp.OTPRequest{},
-		&otp.OTPToken{},); err != nil {
+		&otp.OTPToken{}); err != nil {
 		log.Fatalf("Migration failed: %v", err)
 	}
 	fmt.Println("Migrations completed!")
-	
+
 	churchID := seedChurch(db)
-    seedSuperAdmin(db, churchID)
+	seedSuperAdmin(db, churchID)
 
 	r := gin.Default()
-	
+
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
-	
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, 
+		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -179,18 +180,17 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 	r.GET("/api/upload-url", GetSignedUploadURL)
-	
+
 	smsRepo := sms.NewRepository()
 	smsService := sms.NewService(smsRepo)
 	smsHandler := sms.NewHandler(db, smsService)
 	smsHandler.RegisterRoutes(r)
 
-	
 	churchRepo := church.NewRepository()
 	churchSvc := church.NewService(churchRepo)
 	churchHandler := church.NewHandler(db, churchSvc)
 	churchHandler.RegisterRoutes(r)
-	
+
 	guardianRepo := guardian.NewRepository()
 	guardianSvc := guardian.NewService(guardianRepo)
 	guardianHandler := guardian.NewHandler(db, guardianSvc)
@@ -201,8 +201,16 @@ func main() {
 	childHandler := child.NewHandler(db, childSvc)
 	childHandler.RegisterRoutes(r)
 
+	sendPulseClient := messaging.NewSendPulseClient(os.Getenv("SENDPULSE_API_KEY"))
+	messagingSvc := messaging.NewService(sendPulseClient)
+
+	otpRepo := otp.NewRepository()
+	otpSvc := otp.NewService(otpRepo)
+	otpHandler := otp.NewHandler(db, otpSvc)
+	otpHandler.RegisterRoutes(r)
+
 	dropoffRepo := dropoff.NewRepository()
-	dropOffSvc := dropoff.NewService(dropoffRepo, guardianRepo, childRepo)
+	dropOffSvc := dropoff.NewService(dropoffRepo, guardianRepo, childRepo, messagingSvc, otpSvc)
 	dropoffHandler := dropoff.NewHandler(db, dropOffSvc)
 	dropoffHandler.RegisterRoutes(r)
 
@@ -216,19 +224,12 @@ func main() {
 	userHandler := user.NewHandler(db, userSvc)
 	userHandler.RegisterRoutes(r)
 
-
 	secRepo := security.NewRepository()
 	secSvc := security.NewService(secRepo)
 	secHandler := security.NewHandler(db, secSvc)
 	secHandler.RegisterRoutes(r)
 
-	otpRepo := otp.NewRepository()
-	otpSvc := otp.NewService(otpRepo)
-	otpHandler := otp.NewHandler(db, otpSvc)
-	otpHandler.RegisterRoutes(r)
-
-	
-	authSvc := auth.NewService( otpSvc, userSvc)
+	authSvc := auth.NewService(otpSvc, userSvc)
 	authHandler := auth.NewHandler(db, authSvc)
 	authHandler.RegisterRoutes(r)
 

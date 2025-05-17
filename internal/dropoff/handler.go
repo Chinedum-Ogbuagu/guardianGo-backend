@@ -26,9 +26,9 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 		group.GET("/session/:id", h.GetDropSessionByID)
 		group.GET("/session/code/:code", h.GetDropSessionByCode)
 		group.GET("/sessions", h.GetDropSessionsByDate)
-		group.POST("/confirm/:id", h.ConfirmPickup) 
+		group.POST("/confirm/:id", h.ConfirmPickup)
 		group.PUT("/session/:id/image", h.UpdateDropSessionImage)
-
+		group.GET("/session/verify-secret", h.VerifyPickupSecret)
 
 		group.GET("/session/:id/children", h.GetDropOffsBySessionID)
 		group.GET("/child/:id", h.GetDropOffByID)
@@ -38,13 +38,14 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 type GuardianPayload struct {
 	Name  string `json:"name" binding:"required"`
 	Phone string `json:"phone" binding:"required"`
+	Email string `json:"guardianEmail"`
 }
 
 type ChildPayload struct {
-	Name     string `json:"name" binding:"required"`
-	Class    string `json:"class" binding:"required"`
-	Bag      bool   `json:"bag"`
-	Note     string `json:"note"`
+	Name  string `json:"name" binding:"required"`
+	Class string `json:"class" binding:"required"`
+	Bag   bool   `json:"bag"`
+	Note  string `json:"note"`
 }
 type Pagination struct {
 	Page     int `form:"page,default=0"`
@@ -54,7 +55,6 @@ type UpdateImageRequest struct {
 	PhotoURL string `json:"photo_url" binding:"required"`
 }
 
-
 type PaginatedResponse struct {
 	Data       interface{} `json:"data"`
 	TotalCount int64       `json:"total_count"`
@@ -62,10 +62,10 @@ type PaginatedResponse struct {
 	PageSize   int         `json:"page_size"`
 }
 type CreateDropSessionRequest struct {
-	ChurchID  *uuid.UUID          `json:"church_id" binding:"required"`
-	Note     string           `json:"note"`
-	Guardian GuardianPayload  `json:"guardian" binding:"required"`
-	Children []ChildPayload   `json:"children" binding:"required"`
+	ChurchID *uuid.UUID      `json:"church_id" binding:"required"`
+	Note     string          `json:"note"`
+	Guardian GuardianPayload `json:"guardian" binding:"required"`
+	Children []ChildPayload  `json:"children" binding:"required"`
 }
 
 func (h *Handler) CreateDropSession(c *gin.Context) {
@@ -230,4 +230,21 @@ func (h *Handler) UpdateDropSessionImage(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Photo URL updated successfully"})
+}
+func (h *Handler) VerifyPickupSecret(c *gin.Context) {
+	code := c.Query("code")
+	secret := c.Query("secret")
+
+	if code == "" || secret == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "code and secret are required"})
+		return
+	}
+
+	session, err := h.Service.VerifyPickupCode(h.DB, code, secret)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid code or secret"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"session": session})
 }

@@ -24,6 +24,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 	{
 		group.POST("/send", h.SendOTP)
 		group.POST("/verify", h.VerifyOTP)
+
 	}
 }
 
@@ -50,9 +51,9 @@ func (h *Handler) SendOTP(c *gin.Context) {
 }
 
 type VerifyOTPRequest struct {
-	Phone string `json:"phone" binding:"required"`
-	Code  string `json:"code" binding:"required"`
-    Purpose string `json:"purpose"` // optional, based on use case
+	Phone   string `json:"phone" binding:"required"`
+	Code    string `json:"code" binding:"required"`
+	Purpose string `json:"purpose"` // optional, based on use case
 }
 
 func (h *Handler) VerifyOTP(c *gin.Context) {

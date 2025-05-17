@@ -16,6 +16,7 @@ type Repository interface {
 	CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardianID uint, date time.Time) (bool, error)
 	UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error
 	UpdateDropSessionImageURL(db *gorm.DB, sessionID string, imageURL string) error
+	VerifyPickupSecret(db *gorm.DB, code string, secret string) (*DropSession, error)
 
 
 
@@ -141,4 +142,11 @@ func (r *repository) CheckGuardianDropSessionExistsForDate(db *gorm.DB, guardian
 
 func (r *repository) UpdatePickupStatus(db *gorm.DB, sessionID uint, status string) error {
 	return db.Model(&DropSession{}).Where("id = ?", sessionID).Update("pickup_status", status).Error
+}
+func (r *repository) VerifyPickupSecret(db *gorm.DB, code string, secret string) (*DropSession, error) {
+	var session DropSession
+	if err := db.Where("unique_code = ? AND pickup_secret = ?", code, secret).First(&session).Error; err != nil {
+		return nil, err
+	}
+	return &session, nil
 }

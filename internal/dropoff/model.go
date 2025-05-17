@@ -17,6 +17,7 @@ type DropSession struct {
 	Note       string    `json:"note"`
 	CreatedAt  time.Time `json:"created_at"`
 	PickupStatus     string    `gorm:"default:'awaiting'" json:"pickup_status"` 
+	PickupSecret   string    `json:"-"`
 	DropOffs   []DropOff `json:"drop_offs,omitempty" gorm:"foreignKey:DropSessionID"`
 }
 
