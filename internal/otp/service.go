@@ -51,11 +51,11 @@ type WhatsAppRequest struct {
 
 // WhatsAppResponse represents the response from the WhatsApp OTP send template endpoint.
 type WhatsAppResponse struct {
-	Code      string `json:"code"`
-	MessageID string `json:"message_id"`
-	Message   string `json:"message"`
-	Balance   string `json:"balance"`
-	User      string `json:"user"`
+	Code      string  `json:"code"`
+	MessageID string  `json:"message_id"`
+	Message   string  `json:"message"`
+	Balance   float64 `json:"balance"`
+	User      string  `json:"user"`
 }
 
 func (s *service) SendOTP(db *gorm.DB, phoneNumber string, purpose string, dropOffID uint) (*OTPRequest, error) {
@@ -304,11 +304,11 @@ func (s *service) SendWhatsAppOTP(phoneNumber string, data map[string]string) (*
 		return &singleResponse, nil
 	}
 
-	var arrayResponse []WhatsAppResponse
-	err = json.Unmarshal(bodyBytes, &arrayResponse)
-	if err == nil && len(arrayResponse) > 0 {
-		return &arrayResponse[0], nil
-	}
+	// var arrayResponse WhatsAppResponse
+	// err = json.Unmarshal(bodyBytes, &arrayResponse)
+	// if err == nil && len(arrayResponse) > 0 {
+	// 	return &arrayResponse[0], nil
+	// }
 
 	return nil, fmt.Errorf("failed to decode Termii WhatsApp template response: %v, body: %s", err, string(bodyBytes))
 }

@@ -162,7 +162,7 @@ func (s *service) CreateDropSession(db *gorm.DB, req CreateDropSessionRequest) (
 	}
 	// Send the pickup secret via email
 	_, err = s.otpService.SendEmailOTP(guardianEntity.Email, secret)
-	fmt.Printf("Error sending pickup secret email: %s", guardianEntity.Email)
+
 	if err != nil {
 		fmt.Printf("Error sending pickup secret email: %v\n", err)
 		// Consider if this error should be fatal or just logged.

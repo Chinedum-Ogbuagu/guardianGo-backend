@@ -29,7 +29,7 @@ func (h *Handler) RegisterRoutes(r *gin.Engine) {
 type GuardianRequest struct {
 	Name  string `json:"name" binding:"required"`
 	Phone string `json:"phone" binding:"required"`
-	Email string `json:"email"`
+	Email string `json:"guardianEmail"`
 }
 
 func (h *Handler) FindOrCreateGuardian(c *gin.Context) {
